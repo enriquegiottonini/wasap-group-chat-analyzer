@@ -46,6 +46,18 @@ make format          # ruff check --fix + format
 make nbs             # exporta los notebooks de marimo a .ipynb con salidas
 ```
 
+### Notebooks
+
+Se editan con marimo (`uv run marimo edit notebooks/<nombre>.py`) y se exportan a
+`.ipynb` con sus salidas (`make nbs`) para que GitHub los muestre. Nunca muestran
+nombres reales: los remitentes aparecen con un id anónimo (hash con la sal de `.env`).
+
+- `utils`: funciones compartidas por los otros dos (DuckDB del chat activo con la
+  función `anon()`, tablas y gráficas), al estilo de los `AdventUtils` de Norvig.
+- `01_eda_bronze`: los datos crudos tal como los exporta WhatsApp, su estructura y
+  rarezas, y la tabla de qué se conserva y qué se descarta.
+- `02_eda_silver`: los datos tidy y las preguntas del análisis (pendiente).
+
 `make ingest` toma el zip del chat activo (o `ZIP=...`) y deja en `data/raw/<chat>/`
 una copia (`whatsapp_chat.zip`), su contenido (`_chat.txt`) y un `FUENTE.txt`
 con el origen de los datos: grupo, método de exportación, fecha de exportación, periodo
@@ -68,6 +80,7 @@ wasap_group_analyzer/
 ├── config.py              <- carga params.yml y .env, configura el logging
 ├── constants.py           <- rutas del proyecto
 ├── logging.py             <- decorador @log_execution (inicio/fin/error + tiempo)
+├── anonymize.py           <- ids anónimos: blake2b con sal sobre el nombre normalizado
 ├── provenance.py          <- sha256 y FUENTE.txt: origen, fechas y descripción del chat exportado
 ├── policies/              <- FilePolicy: skip/overwrite/error ante archivos existentes
 └── jobs/

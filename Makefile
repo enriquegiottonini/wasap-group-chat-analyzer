@@ -33,8 +33,11 @@ clean: ## Delete caches and data/raw, data/interim, data/processed (keeps .gitke
 nb: ## Export one marimo notebook to .ipynb with outputs (NOTEBOOK=notebooks/<name>, without .py)
 	uv run marimo export ipynb $(NOTEBOOK).py -o $(NOTEBOOK).ipynb --include-outputs
 
-nbs: ## Export every marimo notebook to .ipynb with outputs
-	@for nb in $(NOTEBOOKS); do $(MAKE) --no-print-directory nb NOTEBOOK=$$nb || exit 1; done
+nbs: ## Export every marimo notebook (that exists yet) to .ipynb with outputs
+	@for nb in $(NOTEBOOKS); do \
+		[ -f $$nb.py ] || continue; \
+		$(MAKE) --no-print-directory nb NOTEBOOK=$$nb || exit 1; \
+	done
 
 # --- Pipeline ------------------------------------------------------------------
 
