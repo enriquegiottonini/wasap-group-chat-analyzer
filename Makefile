@@ -1,8 +1,8 @@
 # `make help` lists every rule with its description ("## ..." at the end of the line).
 .DEFAULT_GOAL := help
-.PHONY: help requirements test lint format clean nb nbs
+.PHONY: help requirements test lint format clean nb nbs ingest
 
-NOTEBOOKS = notebooks/utils notebooks/01_eda_bronze notebooks/02_eda_platinum
+NOTEBOOKS = notebooks/utils notebooks/01_eda_bronze notebooks/02_eda_silver
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "%-20s %s\n", $$1, $$2}'
@@ -35,3 +35,18 @@ nb: ## Export one marimo notebook to .ipynb with outputs (NOTEBOOK=notebooks/<na
 
 nbs: ## Export every marimo notebook to .ipynb with outputs
 	@for nb in $(NOTEBOOKS); do $(MAKE) --no-print-directory nb NOTEBOOK=$$nb || exit 1; done
+
+# --- Pipeline ------------------------------------------------------------------
+
+# CHAT: slug of the chat to work on (default: `chat` in params.yml); every chat lives in
+#       its own data/{raw,interim,processed}/<chat>/ folder.
+# ZIP: WhatsApp export to ingest (default: the zip registered for CHAT in `chats`).
+# ON_EXISTS: skip | overwrite | error (default: source.on_exists in params.yml).
+CHAT ?=
+ZIP ?=
+ON_EXISTS ?=
+export CHAT
+
+ingest: ## Copy a WhatsApp export to data/raw/<chat>/, unzip it and write FUENTE.txt (CHAT=, ZIP=, ON_EXISTS=)
+	uv run python -m wasap_group_analyzer.jobs.ingest_job $(if $(CHAT),--chat "$(CHAT)") \
+		$(if $(ZIP),--zip "$(ZIP)") $(if $(ON_EXISTS),--on-exists "$(ON_EXISTS)")

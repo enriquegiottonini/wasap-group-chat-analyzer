@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import re
 import sys
 
 from dotenv import load_dotenv
@@ -10,10 +11,31 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PARAMS_FILE = PROJECT_ROOT / "params.yml"
 ENV_FILE = PROJECT_ROOT / ".env"
 
+# Un chat se identifica por un slug que también es el nombre de su carpeta en data/*/.
+CHAT_SLUG = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
+
 
 def load_params() -> dict:
     with PARAMS_FILE.open() as file:
         return yaml.safe_load(file)
+
+
+def validate_chat(chat: str) -> str:
+    if not CHAT_SLUG.match(chat):
+        raise ValueError(f"Invalid chat slug {chat!r}: use lowercase letters, digits and _")
+    return chat
+
+
+def active_chat(params: dict, chat: str | None = None) -> str:
+    """Chat con el que trabajan jobs y notebooks.
+
+    En orden: el argumento explícito (`--chat`), la variable de entorno `CHAT` (así
+    `make ... CHAT=x` llega también a los notebooks) y `chat` en params.yml.
+    """
+    chat = chat or os.environ.get("CHAT") or params.get("chat")
+    if not chat:
+        raise RuntimeError("No chat selected: set `chat` in params.yml or pass CHAT=<slug>")
+    return validate_chat(chat)
 
 
 def load_salt() -> bytes:

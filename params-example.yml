@@ -1,3 +1,10 @@
+# Chat activo: el que usan los jobs y los notebooks. Se cambia sin editar con `make ... CHAT=otro`.
+chat: "mi_grupo"
+
+# Chats registrados: slug (nombre de su carpeta en data/raw, interim y processed) → zip exportado.
+chats:
+  mi_grupo: "~/Downloads/WhatsApp Chat - <nombre del grupo>.zip"
+
 logging:
   level: "INFO"
   file: "logs/wasap_group_analyzer.log"
@@ -6,12 +13,34 @@ logging:
 source:
   name: "WhatsApp (Meta Platforms, Inc.)"
   url: "https://www.whatsapp.com"
-  # Ruta local al zip exportado desde el celular. Se puede sobreescribir con `make ingest ZIP=...`.
-  export_zip: "~/Downloads/WhatsApp Chat - <nombre del grupo>.zip"
-  # Qué hacer si data/raw ya tiene el zip: skip | overwrite | error.
+  # Qué hacer si data/raw ya tiene el zip o sus archivos: skip | overwrite | error.
   on_exists: "skip"
   # Zona horaria del celular que exportó: los timestamps del chat vienen en hora local, sin offset.
   timezone: "America/Hermosillo"
+  method: >-
+    Exportación manual desde la app de WhatsApp para iOS: Info del grupo → Exportar chat →
+    Sin archivos (solo el texto, sin fotos, audios ni stickers).
+  description: >-
+    Historial completo del grupo, exportado por WhatsApp como texto plano. El zip trae un
+    solo archivo, _chat.txt (UTF-8, fin de línea CRLF), con una línea por mensaje en el
+    formato "[dd/mm/aa, h:mm:ss a.m.] Remitente: texto"; los mensajes de varias líneas
+    siguen en las líneas de abajo, sin encabezado. La hora es la hora local del celular que
+    exportó, en formato de 12 horas y sin zona horaria; entre la hora y "a.m."/"p.m." va un
+    espacio angosto (U+202F). WhatsApp agrega caracteres invisibles: una marca de dirección
+    (U+200E) al inicio de líneas con adjuntos o avisos, y aislantes (U+2068…U+2069)
+    alrededor de las menciones "@Nombre". Los contactos que el celular no tiene guardados
+    aparecen como "~ Nombre". Como se exportó sin archivos, cada adjunto se sustituye por un
+    marcador en inglés ("sticker omitted", "image omitted", "audio omitted", "video
+    omitted", "GIF omitted", "document omitted", "card omitted"), a veces después del pie
+    de foto. También hay avisos del sistema (altas y bajas, mensajes eliminados, cambios de
+    descripción, mensajes de una sola vista, encuestas "POLL:") y el sufijo "<This message
+    was edited>" en los mensajes editados. Los mensajes no siempre están en orden
+    cronológico estricto (p. ej. al fijar un mensaje).
+  documentation:
+    - "https://faq.whatsapp.com/1180414079177245/"
+  usage: >-
+    Datos privados de los participantes del grupo, usados solo con fines académicos. No se
+    redistribuyen: data/ no se versiona en git y todo conjunto derivado se anonimiza.
 
 nlp:
   model: "es_core_news_sm"

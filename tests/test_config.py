@@ -6,12 +6,12 @@ from wasap_group_analyzer import config
 
 def test_load_params_parses_yaml_file(tmp_path, monkeypatch):
     params_file = tmp_path / "params.yml"
-    params_file.write_text("logging:\n  level: INFO\nsource:\n  export_zip: chat.zip\n")
+    params_file.write_text("chat: primos\nlogging:\n  level: INFO\n")
     monkeypatch.setattr(config, "PARAMS_FILE", params_file)
 
     params = config.load_params()
 
-    assert params == {"logging": {"level": "INFO"}, "source": {"export_zip": "chat.zip"}}
+    assert params == {"chat": "primos", "logging": {"level": "INFO"}}
 
 
 def test_load_logging_writes_to_configured_file(tmp_path):
@@ -40,3 +40,22 @@ def test_load_salt_fails_loudly_when_missing(tmp_path, monkeypatch):
 
     with pytest.raises(RuntimeError, match="ANON_SALT"):
         config.load_salt()
+
+
+def test_active_chat_prefers_argument_then_env_then_params(monkeypatch):
+    params = {"chat": "primos"}
+    monkeypatch.delenv("CHAT", raising=False)
+    assert config.active_chat(params) == "primos"
+
+    monkeypatch.setenv("CHAT", "tios")
+    assert config.active_chat(params) == "tios"
+    assert config.active_chat(params, "abuelos") == "abuelos"
+
+
+def test_active_chat_rejects_unsafe_or_missing_slugs(monkeypatch):
+    monkeypatch.delenv("CHAT", raising=False)
+    with pytest.raises(RuntimeError, match="No chat selected"):
+        config.active_chat({})
+    for bad in ["../raw", "Los Primos", "a/b", "_x"]:
+        with pytest.raises(ValueError, match="Invalid chat slug"):
+            config.active_chat({}, bad)
