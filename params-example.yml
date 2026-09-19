@@ -1,0 +1,17 @@
+logging:
+  level: "INFO"
+  file: "logs/wasap_group_analyzer.log"
+  console: false
+
+source:
+  name: "WhatsApp (Meta Platforms, Inc.)"
+  url: "https://www.whatsapp.com"
+  # Ruta local al zip exportado desde el celular. Se puede sobreescribir con `make ingest ZIP=...`.
+  export_zip: "~/Downloads/WhatsApp Chat - <nombre del grupo>.zip"
+  # Qué hacer si data/raw ya tiene el zip: skip | overwrite | error.
+  on_exists: "skip"
+  # Zona horaria del celular que exportó: los timestamps del chat vienen en hora local, sin offset.
+  timezone: "America/Hermosillo"
+
+nlp:
+  model: "es_core_news_sm"

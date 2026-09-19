@@ -1,0 +1,49 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "wasap_group_analyzer"
+version = "0.0.1"
+description = "Análisis de un grupo de WhatsApp exportado: datos tidy anonimizados y EDA."
+authors = [
+  { name = "Enrique Giottonini - MCD - UNISON" },
+]
+
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "emoji>=2.14",
+    # Modelo de spaCy en español; se fija por URL para que `uv sync` lo instale.
+    "es-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.8.0/es_core_news_sm-3.8.0-py3-none-any.whl",
+    "loguru",
+    # [sql] trae duckdb, polars, pyarrow y sqlglot para las celdas SQL de marimo.
+    "marimo[sql]>=0.24.0",
+    "matplotlib>=3.11",
+    "nbformat>=5.11",
+    "pandas>=3.0",
+    "pytest",
+    "python-dotenv",
+    "pyyaml>=6.0.2",
+    "spacy>=3.8.16",
+]
+requires-python = "~=3.14.0"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.5",
+]
+
+[tool.ruff]
+line-length = 99
+src = ["wasap_group_analyzer"]
+include = ["pyproject.toml", "wasap_group_analyzer/**/*.py", "tests/**/*.py"]
+
+[tool.ruff.lint]
+extend-select = ["I"]  # Add import sorting
+
+[tool.ruff.lint.isort]
+known-first-party = ["wasap_group_analyzer"]
+force-sort-within-sections = true
