@@ -39,7 +39,12 @@ def active_chat(params: dict, chat: str | None = None) -> str:
 
 
 # Ajustes de la anonimización (sección `anonymize` de params.yml); ver anonymize.Masker.
-ANONYMIZE_DEFAULTS = {"min_length": 3, "keep_words": [], "allow_names": ["Meta AI"]}
+ANONYMIZE_DEFAULTS = {
+    "min_length": 3,
+    "keep_words": [],
+    "allow_names": ["Meta AI"],
+    "extra_names": [],
+}
 
 
 def anonymize_settings(params: dict) -> dict:

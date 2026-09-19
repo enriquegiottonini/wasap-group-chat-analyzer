@@ -3,6 +3,8 @@
 - bronze.parquet: una fila por registro, con nombres reales y el texto sin tocar. Es
   para análisis manual en esta máquina (data/ nunca se versiona).
 - messages_anon.parquet: la misma tabla anonimizada, que es la entrada de silver.
+- members.parquet: el alias (un animal) de cada sender_id. Se asigna aquí porque solo
+  aquí se conocen los nombres reales, y así ningún alias comparte una palabra con ellos.
 
     uv run python -m wasap_group_analyzer.jobs.anonymize_job [--chat SLUG]
 """
@@ -13,6 +15,7 @@ from pathlib import Path
 import duckdb
 from loguru import logger
 
+from wasap_group_analyzer.aliases import assign_aliases
 from wasap_group_analyzer.anonymize import Masker
 from wasap_group_analyzer.config import (
     active_chat,
@@ -29,6 +32,7 @@ from wasap_group_analyzer.provenance import read_group_name
 CHAT_FILENAME = "_chat.txt"
 BRONZE_FILENAME = "bronze.parquet"
 ANON_FILENAME = "messages_anon.parquet"
+MEMBERS_FILENAME = "members.parquet"
 
 
 def people_names(con: duckdb.DuckDBPyConnection) -> list[str]:
@@ -52,7 +56,7 @@ def _copy_to_parquet(con: duckdb.DuckDBPyConnection, query: str, destination: Pa
 @log_execution
 def anonymize(
     chat_file: Path, group: str, interim_dir: Path, salt: bytes, settings: dict
-) -> tuple[Path, Path]:
+) -> tuple[Path, Path, Path]:
     interim_dir.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect()
 
@@ -87,7 +91,29 @@ def anonymize(
         """,
         anon_file,
     )
-    return bronze_file, anon_file
+
+    # Alias en el orden del primer mensaje de cada miembro, evitando las palabras de los
+    # nombres reales (y de los apodos de `extra_names`).
+    senders = con.execute(
+        """
+        SELECT sender_id(sender), min(timestamp)
+        FROM bronze
+        WHERE kind <> 'group_notice'
+        GROUP BY sender
+        ORDER BY min(timestamp), min(record_no)
+        """
+    ).fetchall()
+    aliases = assign_aliases(
+        [sender for sender, _ in senders], avoid_words=set(masker.forms) | masker.extra
+    )
+    con.execute("CREATE TABLE members (sender_id VARCHAR, alias VARCHAR, first_message TIMESTAMP)")
+    con.executemany(
+        "INSERT INTO members VALUES (?, ?, ?)",
+        [(sender, aliases[sender], first) for sender, first in senders],
+    )
+    members_file = interim_dir / MEMBERS_FILENAME
+    _copy_to_parquet(con, "SELECT * FROM members ORDER BY first_message", members_file)
+    return bronze_file, anon_file, members_file
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -104,7 +130,7 @@ def main(argv: list[str] | None = None) -> None:
     chat = active_chat(params, args.chat)
     raw_dir = RAW_DIR / chat
 
-    bronze_file, anon_file = anonymize(
+    bronze_file, anon_file, members_file = anonymize(
         chat_file=raw_dir / CHAT_FILENAME,
         group=read_group_name(raw_dir),
         interim_dir=INTERIM_DIR / chat,
@@ -113,6 +139,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     print(f"bronze (con nombres reales, solo local) → {bronze_file}")
     print(f"anonimizado → {anon_file}")
+    print(f"alias de los miembros → {members_file}")
 
 
 if __name__ == "__main__":

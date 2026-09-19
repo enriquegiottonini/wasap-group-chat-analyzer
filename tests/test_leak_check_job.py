@@ -23,7 +23,7 @@ def write_notebook(path, source, outputs):
 
 
 def test_the_anonymized_copy_has_no_leaks(interim):
-    bronze_file, anon_file = interim
+    bronze_file, anon_file, _ = interim
 
     results = job.leak_check(bronze_file, [anon_file], ANONYMIZE_DEFAULTS)
 
@@ -31,7 +31,7 @@ def test_the_anonymized_copy_has_no_leaks(interim):
 
 
 def test_finds_names_in_text_files_whatever_the_accents(interim, tmp_path):
-    bronze_file, _ = interim
+    bronze_file, _, _ = interim
     leaky = tmp_path / "leaky.md"
     leaky.write_text("Saludos a ANA y a Lopez", encoding="utf-8")
     clean = tmp_path / "clean.md"
@@ -44,7 +44,7 @@ def test_finds_names_in_text_files_whatever_the_accents(interim, tmp_path):
 
 
 def test_scans_notebook_code_and_outputs_but_not_images(interim, tmp_path):
-    bronze_file, _ = interim
+    bronze_file, _, _ = interim
     image_only = write_notebook(
         tmp_path / "image.ipynb", "x = 1", [{"data": {"image/png": "Beto Ruiz"}}]
     )
@@ -59,7 +59,7 @@ def test_scans_notebook_code_and_outputs_but_not_images(interim, tmp_path):
 
 
 def test_allowed_names_are_not_leaks(interim, tmp_path):
-    bronze_file, _ = interim
+    bronze_file, _, _ = interim
     notes = tmp_path / "notes.md"
     notes.write_text("Ana López", encoding="utf-8")
     settings = {**ANONYMIZE_DEFAULTS, "allow_names": ["Ana López"]}

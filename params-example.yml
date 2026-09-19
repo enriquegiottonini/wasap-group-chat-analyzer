@@ -50,6 +50,9 @@ anonymize:
   allow_names: ["Meta AI"]
   # Largo mínimo de una palabra de nombre para enmascararla donde aparezca en el texto.
   min_length: 3
+  # Apodos y nombres de personas que no son nombres de contacto (maestros, amigos, "Dani"):
+  # se enmascaran como [nombre]. Revisa los nombres propios frecuentes del chat para llenarla.
+  extra_names: []
 
 nlp:
   model: "es_core_news_sm"

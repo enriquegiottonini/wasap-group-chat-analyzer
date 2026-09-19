@@ -667,11 +667,13 @@ def _():
     ## 9. Qué conservamos y qué descartamos
 
     Esta tabla es la especificación del job de anonimización (`make anonymize`). El job
-    deja dos archivos en `data/interim/<chat>/`, con una fila por registro:
+    deja tres archivos en `data/interim/<chat>/`:
 
     - `bronze.parquet`: la tabla de este notebook (`record_no`, `timestamp`, `sender`,
       `body`, `kind`) **con nombres reales y el texto sin tocar**, para análisis manual en
       esta máquina. Como todo `data/`, nunca se sube a git.
+    - `members.parquet`: el alias (un animal de México) de cada `sender_id`, que
+      se explica en `02_eda_silver`.
     - `messages_anon.parquet`: la versión anonimizada, entrada de silver:
 
     | Dato crudo | Decisión | Columna en `messages_anon` |
@@ -704,7 +706,7 @@ def _():
     silver, los notebooks exportados y las referencias, y falla si encuentra alguno.
 
     Lo que queda para el EDA silver (`02_eda_silver`): definir los tipos de mensaje, qué
-    cuenta como palabra, emojis, stop words, adjetivos y los alias de presidentes.
+    cuenta como palabra, emojis, stop words, adjetivos y los alias de los miembros.
 
     ## 10. El job produce lo mismo que este notebook
 

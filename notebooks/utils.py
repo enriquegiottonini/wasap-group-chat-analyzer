@@ -95,13 +95,16 @@ def group_name(chat: str | None = None) -> str:
 
 
 @app.function
-def connect(chat: str | None = None, views: bool = True) -> duckdb.DuckDBPyConnection:
+def connect(
+    chat: str | None = None, views: bool = True, private: bool = False
+) -> duckdb.DuckDBPyConnection:
     """DuckDB en memoria para explorar un chat.
 
     - `anon(nombre)`: id anónimo del nombre (mismo hash con sal que el job de
       anonimización), para mostrar remitentes sin exponer nombres reales.
     - Si `views`, una vista por cada `.parquet` de `interim/` y `processed/`, con el
-      nombre del archivo (`bronze`, `messages_anon`...).
+      nombre del archivo (`messages_anon`, `messages`...). `bronze` (con nombres reales)
+      solo si `private`: para análisis manual, nunca en un notebook que se publica.
 
     El texto crudo (`raw/`) no se carga aquí: leerlo y separarlo en registros es parte de
     lo que explica `01_eda_bronze`.
@@ -115,6 +118,8 @@ def connect(chat: str | None = None, views: bool = True) -> duckdb.DuckDBPyConne
     if views:
         for layer in ("interim", "processed"):
             for parquet in sorted(dirs[layer].glob("*.parquet")):
+                if parquet.stem == "bronze" and not private:
+                    continue
                 # Una vista no admite parámetros preparados: la ruta va en el SQL, escapada.
                 path = str(parquet).replace("'", "''")
                 con.execute(

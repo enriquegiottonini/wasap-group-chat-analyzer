@@ -135,3 +135,12 @@ def test_mask_body_keeps_content_kinds_and_drops_the_rest(masker):
     assert masker.mask_body("system_notice", f"{LRM}Ana López added Carla") is None
     assert masker.mask_body("location", f"{LRM}Location: https://maps.google.com/?q=1,2") is None
     assert masker.mask_body("text", None) is None
+
+
+def test_extra_names_are_masked_as_unknown_names(masker):
+    extra = Masker(["Ana López"], SALT, extra_names=["Dani", "Profe Pérez"])
+    (ana,) = ids(extra, "Ana López")
+
+    assert extra.mask("dile a DANI y al profe pérez que Ana viene") == (
+        f"dile a [nombre] y al [nombre] que [{ana}] viene"
+    )

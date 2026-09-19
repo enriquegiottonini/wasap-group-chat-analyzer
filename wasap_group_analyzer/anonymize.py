@@ -122,7 +122,9 @@ class Masker:
     combinantes) y se reemplaza en el original por `[id]`, o por `[nombre]` si es de
     varios miembros. Es la misma normalización que usa la verificación de fugas.
 
-    Los nombres de `allow_names` (bots como Meta AI) no se tocan.
+    `extra_names` son nombres o apodos que no están entre los nombres de contacto (p. ej.
+    "Dani", o el apellido de un maestro): se enmascaran como `[nombre]`. Los nombres de
+    `allow_names` (bots como Meta AI) no se tocan.
     """
 
     def __init__(
@@ -132,11 +134,14 @@ class Masker:
         min_length: int = 3,
         keep_words: Iterable[str] = (),
         allow_names: Iterable[str] = (),
+        extra_names: Iterable[str] = (),
     ):
         self.salt = salt
         self.allow = {normalize_name(name) for name in allow_names}
         people = {normalize_name(name) for name in names} - self.allow - {""}
         self.forms = name_forms(people, min_length, keep_words)
+        # Sin dueño conocido: siempre `[nombre]`, salvo que ya sea forma de un miembro.
+        self.extra = {fold(name) for name in extra_names} - set(self.forms)
 
         self.pattern = re.compile(
             "|".join(
@@ -149,7 +154,7 @@ class Masker:
             ),
             re.IGNORECASE,
         )
-        by_length = sorted(self.forms, key=len, reverse=True)
+        by_length = sorted(set(self.forms) | self.extra, key=len, reverse=True)
         self.name_pattern = (
             re.compile(rf"(?<!\w)(?:{'|'.join(map(re.escape, by_length))})(?!\w)")
             if by_length
@@ -179,8 +184,8 @@ class Masker:
         return NUMBER_MARK
 
     def _name_mark(self, form: str) -> str:
-        owners = self.forms[form]
-        if len(owners) > 1:
+        owners = self.forms.get(form, ())
+        if len(owners) != 1:
             return AMBIGUOUS_NAME
         return NAME_MARK.format(self.id(next(iter(owners))))
 

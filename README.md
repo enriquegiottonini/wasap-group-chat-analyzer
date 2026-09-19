@@ -58,11 +58,17 @@ make nbs             # exporta los notebooks de marimo a .ipynb con salidas
   son ids (hash con la sal de `.env`) y en el texto las menciones, nombres, URLs, correos
   y números largos se sustituyen por marcas (`@[id]`, `[id]`, `[nombre]`, `[url:dominio]`,
   `[correo]`, `[numero]`). Los avisos y las ubicaciones pierden el texto.
+- `members.parquet`: el alias de cada miembro, un animal de México ("Ajolote",
+  "Jaguar"...) en el orden en que escribió por primera vez. Se asigna aquí, donde se
+  conocen los nombres reales, para saltar cualquier alias que comparta una palabra con
+  ellos.
 
 La sección `anonymize` de `params.yml` ajusta el enmascarado: `keep_words` (palabras
 que forman parte de un nombre de contacto pero son comunes en el chat, p. ej. la
-carrera), `allow_names` (bots como Meta AI) y `min_length`. `make leak-check` busca
-cada nombre real en todo lo que se puede publicar; `SHOW=1` lista los que encuentre.
+carrera), `allow_names` (bots como Meta AI), `extra_names` (apodos y nombres de personas
+que no son nombres de contacto, como maestros o amigos: se enmascaran como `[nombre]`) y
+`min_length`. `make leak-check` busca cada nombre real (y cada `extra_names`) en todo lo
+que se puede publicar; `SHOW=1` lista los que encuentre.
 
 ### Notebooks
 
@@ -74,7 +80,10 @@ nombres reales: los remitentes aparecen con un id anónimo (hash con la sal de `
   función `anon()`, tablas y gráficas), al estilo de los `AdventUtils` de Norvig.
 - `01_eda_bronze`: los datos crudos tal como los exporta WhatsApp, su estructura y
   rarezas, y la tabla de qué se conserva y qué se descarta.
-- `02_eda_silver`: los datos tidy y las preguntas del análisis (pendiente).
+- `02_eda_silver`: con los mensajes anonimizados decide el diseño de los datos tidy
+  (tipos de mensaje, alias, qué es una palabra, emojis, risas, palabras vacías,
+  adjetivos) y, sobre los datos de silver, responde las preguntas del análisis
+  (pendiente).
 
 `make ingest` toma el zip del chat activo (o `ZIP=...`) y deja en `data/raw/<chat>/`
 una copia (`whatsapp_chat.zip`), su contenido (`_chat.txt`) y un `FUENTE.txt`
@@ -90,7 +99,7 @@ params.yml                 <- configuración local (ignorado por git; ver params
 .env                       <- ANON_SALT, la sal secreta para anonimizar (ignorado por git)
 data/
 ├── raw/<chat>/            <- zip exportado, _chat.txt y FUENTE.txt (bronze)
-├── interim/<chat>/        <- bronze.parquet (con nombres, local) y messages_anon.parquet
+├── interim/<chat>/        <- bronze.parquet (con nombres, local), messages_anon.parquet y members.parquet
 └── processed/<chat>/      <- conjuntos tidy (silver)
 references/                <- diccionarios de datos, uno por conjunto
 notebooks/                 <- marimo (.py) y su exportación a .ipynb para GitHub
@@ -100,6 +109,8 @@ wasap_group_analyzer/
 ├── logging.py             <- decorador @log_execution (inicio/fin/error + tiempo)
 ├── parsing.py             <- _chat.txt -> una fila por mensaje (SQL de DuckDB, el mismo del EDA bronze)
 ├── anonymize.py           <- ids anónimos (blake2b con sal) y enmascarado del texto
+├── aliases.py             <- alias de los miembros: animales de México
+├── text.py                <- tipo de mensaje, contenido legible, emojis, palabras (spaCy) y stop words
 ├── provenance.py          <- sha256 y FUENTE.txt: origen, fechas y descripción del chat exportado
 ├── policies/              <- FilePolicy: skip/overwrite/error ante archivos existentes
 └── jobs/

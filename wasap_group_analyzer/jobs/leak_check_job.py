@@ -1,9 +1,10 @@
 """Verificación de fugas: busca nombres reales del chat donde no deberían estar.
 
-Toma los nombres de data/interim/<chat>/bronze.parquet (remitentes y mencionados) y los
+Toma los nombres de data/interim/<chat>/bronze.parquet (remitentes y mencionados), más
+`anonymize.extra_names` de params.yml (apodos y nombres de terceros), y los
 busca, como palabras completas y sin importar mayúsculas ni acentos, en:
 
-- data/interim/<chat>/messages_anon.parquet y data/processed/<chat>/*.parquet
+- data/interim/<chat>/messages_anon.parquet y members.parquet, y data/processed/<chat>/*.parquet
 - notebooks/*.py y notebooks/*.ipynb (código y salidas, sin las imágenes)
 - references/**/*.md y README.md
 
@@ -37,7 +38,12 @@ from wasap_group_analyzer.constants import (
     PROCESSED_DIR,
     REFERENCES_DIR,
 )
-from wasap_group_analyzer.jobs.anonymize_job import ANON_FILENAME, BRONZE_FILENAME, people_names
+from wasap_group_analyzer.jobs.anonymize_job import (
+    ANON_FILENAME,
+    BRONZE_FILENAME,
+    MEMBERS_FILENAME,
+    people_names,
+)
 from wasap_group_analyzer.logging import log_execution
 
 
@@ -48,7 +54,10 @@ def real_name_forms(bronze_file: Path, settings: dict) -> dict[str, set[str]]:
     con.execute(f"CREATE VIEW bronze AS SELECT * FROM read_parquet('{path}')")
     allow = {normalize_name(name) for name in settings["allow_names"]}
     people = {normalize_name(name) for name in people_names(con)} - allow - {""}
-    return name_forms(people, settings["min_length"], settings["keep_words"])
+    forms = name_forms(people, settings["min_length"], settings["keep_words"])
+    for extra in settings["extra_names"]:
+        forms.setdefault(fold(extra), set()).add(extra)
+    return forms
 
 
 def texts(path: Path) -> Iterator[str]:
@@ -91,6 +100,7 @@ def find_leaks(path: Path, forms: dict[str, set[str]]) -> set[str]:
 def default_targets(chat: str) -> list[Path]:
     targets = [
         INTERIM_DIR / chat / ANON_FILENAME,
+        INTERIM_DIR / chat / MEMBERS_FILENAME,
         *sorted((PROCESSED_DIR / chat).glob("*.parquet")),
     ]
     targets += sorted(NOTEBOOKS_DIR.glob("*.py")) + sorted(NOTEBOOKS_DIR.glob("*.ipynb"))
