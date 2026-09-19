@@ -32,6 +32,9 @@ URL_MARK = "[url:{}]"  # solo se conserva el dominio
 CONTENT_KINDS = frozenset({"text", "attachment", "poll"})
 
 MIN_NUMBER_DIGITS = 8
+# Largo mínimo de un nombre para aceptarle un plural al final ("-s" o "-es").
+MIN_PLURAL_LENGTH = 4
+_PLURAL = "(?:es|s)?"
 # Números largos que no son datos personales: fechas AAAA-MM-DD y rangos de años.
 _NOT_PERSONAL_NUMBER = re.compile(r"\d{4}-\d{2}-\d{2}|\d{4} ?- ?\d{4}")
 
@@ -53,16 +56,27 @@ def sender_id(name: str, salt: bytes) -> str:
     return digest.hexdigest()
 
 
-def fold(text: str) -> str:
-    """Minúsculas y sin ninguna marca combinante (acentos, diéresis, texto "zalgo"), para
-    comparar nombres como los escribe la gente: "Ǵúśťáṽó" y "Gustavo" dan "gustavo"."""
-    decomposed = unicodedata.normalize("NFKD", text)
-    return "".join(ch for ch in decomposed if not unicodedata.combining(ch)).casefold()
-
-
 @cache
 def _fold_char(ch: str) -> str:
-    return fold(ch)
+    """Un carácter normalizado: minúsculas, sin marcas combinantes y sin símbolos.
+
+    Los símbolos (emojis, "™", flechas) se vuelven un espacio. Si no, la normalización
+    los convertiría en letras ("™" da "tm") y pegaría un nombre con ellas, dejándolo de
+    ver como palabra completa.
+    """
+    if unicodedata.category(ch).startswith("S"):
+        return " "
+    decomposed = unicodedata.normalize("NFKD", ch)
+    return "".join(part for part in decomposed if not unicodedata.combining(part)).casefold()
+
+
+def fold(text: str) -> str:
+    """Minúsculas, sin marcas combinantes (acentos, diéresis, texto "zalgo") y sin
+    símbolos, para comparar nombres como los escribe la gente: "Ǵúśťáṽó" da "gustavo"."""
+    if text.isascii():
+        return text.lower()
+    # translate sobre los caracteres distintos: más rápido que recorrer todo el texto.
+    return text.translate({ord(ch): _fold_char(ch) for ch in set(text)})
 
 
 def _fold_with_origin(text: str) -> tuple[str, list[int] | None]:
@@ -117,10 +131,15 @@ class Masker:
     4. Número de 8 dígitos o más (teléfono, cuenta, tarjeta, folio) → `[numero]`, salvo
        fechas y rangos de años.
 
-    Después, los nombres: cada nombre o palabra de nombre de un miembro, como palabra
-    completa, se busca sobre el texto normalizado con `fold` (sin mayúsculas ni marcas
-    combinantes) y se reemplaza en el original por `[id]`, o por `[nombre]` si es de
-    varios miembros. Es la misma normalización que usa la verificación de fugas.
+    Después, los nombres: cada nombre o palabra de nombre de un miembro se busca sobre el
+    texto normalizado con `fold` (sin mayúsculas ni marcas combinantes) y se reemplaza en
+    el original por `[id]`, o por `[nombre]` si es de varios miembros. Es la misma
+    normalización que usa la verificación de fugas. El nombre tiene que ser una palabra
+    completa, con dos concesiones a cómo se escribe en el chat:
+
+    - el límite es una letra, así que un nombre pegado a un guion bajo o a un número
+      (`_nombre_`, el cursivo de WhatsApp, o `nombre123`) también se enmascara;
+    - se acepta un plural al final de los nombres de 4 letras o más ("-s" o "-es").
 
     `extra_names` son nombres o apodos que no están entre los nombres de contacto (p. ej.
     "Dani", o el apellido de un maestro): se enmascaran como `[nombre]`. Los nombres de
@@ -155,10 +174,14 @@ class Masker:
             re.IGNORECASE,
         )
         by_length = sorted(set(self.forms) | self.extra, key=len, reverse=True)
+        alternatives = "|".join(
+            re.escape(form) + (_PLURAL if len(form) >= MIN_PLURAL_LENGTH else "")
+            for form in by_length
+        )
+        # El límite es una letra ([^\W\d_]), no `\w`: así `_nombre_` y `nombre123` también
+        # se enmascaran, que es como spaCy separaría el nombre después.
         self.name_pattern = (
-            re.compile(rf"(?<!\w)(?:{'|'.join(map(re.escape, by_length))})(?!\w)")
-            if by_length
-            else None
+            re.compile(rf"(?<![^\W\d_])(?:{alternatives})(?![^\W\d_])") if by_length else None
         )
 
     def id(self, name: str) -> str:
@@ -184,6 +207,8 @@ class Masker:
         return NUMBER_MARK
 
     def _name_mark(self, form: str) -> str:
+        if form not in self.forms and form not in self.extra:
+            form = form.removesuffix("es") if form.endswith("es") else form.removesuffix("s")
         owners = self.forms.get(form, ())
         if len(owners) != 1:
             return AMBIGUOUS_NAME

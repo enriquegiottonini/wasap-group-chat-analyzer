@@ -144,3 +144,20 @@ def test_extra_names_are_masked_as_unknown_names(masker):
     assert extra.mask("dile a DANI y al profe pérez que Ana viene") == (
         f"dile a [nombre] y al [nombre] que [{ana}] viene"
     )
+
+
+def test_names_are_masked_next_to_underscores_and_in_plural(masker):
+    ana, beto = ids(masker, "Ana López", "Beto Ruiz")
+
+    assert masker.mask("_Ana_ ya llegó") == f"_[{ana}]_ ya llegó"  # cursiva de WhatsApp
+    assert masker.mask("los Ruiz ya están") == f"los [{beto}] ya están"
+    assert masker.mask("los betos de siempre") == f"los [{beto}] de siempre"
+    assert masker.mask("anabel no") == "anabel no"  # no es plural de un nombre
+
+
+def test_names_glued_to_symbols_digits_or_underscores_are_masked(masker):
+    (beto,) = ids(masker, "Beto Ruiz")
+    trademark = chr(0x2122)
+
+    assert masker.mask(f"beto{trademark}") == f"[{beto}]{trademark}"
+    assert masker.mask("beto123") == f"[{beto}]123"

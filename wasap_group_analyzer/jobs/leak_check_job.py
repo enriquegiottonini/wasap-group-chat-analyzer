@@ -60,13 +60,19 @@ def real_name_forms(bronze_file: Path, settings: dict) -> dict[str, set[str]]:
     return forms
 
 
+# El lema lo inventa el lematizador de spaCy, no lo escribió nadie: una palabra común
+# puede tener como lema un nombre ("amada" -> "amado"). Un nombre que sobreviviera al
+# enmascarado aparecería igual en la columna `token`, así que no se pierde detección.
+GENERATED_COLUMNS = frozenset({"lemma"})
+
+
 def texts(path: Path) -> Iterator[str]:
     """Todo el texto de un archivo que podría llevar un nombre."""
     if path.suffix == ".parquet":
         con = duckdb.connect()
         relation = con.read_parquet(str(path))
         for column, dtype in zip(relation.columns, relation.dtypes):
-            if str(dtype) == "VARCHAR":
+            if str(dtype) == "VARCHAR" and column not in GENERATED_COLUMNS:
                 for (value,) in relation.select(f'"{column}"').fetchall():
                     if value:
                         yield value
@@ -85,9 +91,13 @@ def texts(path: Path) -> Iterator[str]:
 
 
 def find_leaks(path: Path, forms: dict[str, set[str]]) -> set[str]:
-    """Formas de nombre que aparecen en el archivo como palabras completas."""
+    r"""Formas de nombre que aparecen en el archivo como palabras completas.
+
+    Las palabras se separan por letras y dígitos, no por `\w`: el guion bajo separa
+    (`_nombre_` es el cursivo de WhatsApp) igual que en el enmascarado.
+    """
     folded = fold("\n".join(texts(path)))
-    words = set(re.findall(r"\w+", folded))
+    words = set(re.findall(r"[^\W_]+", folded))
     hits = {form for form in forms if " " not in form and form in words}
     hits |= {
         form

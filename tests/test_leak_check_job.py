@@ -1,5 +1,6 @@
 import json
 
+import duckdb
 import pytest
 
 from tests.chat_fixture import GROUP, write_chat
@@ -65,3 +66,11 @@ def test_allowed_names_are_not_leaks(interim, tmp_path):
     settings = {**ANONYMIZE_DEFAULTS, "allow_names": ["Ana López"]}
 
     assert job.leak_check(bronze_file, [notes], settings)[notes] == set()
+
+
+def test_lemmas_are_not_scanned(interim, tmp_path):
+    bronze_file, _, _ = interim
+    tokens = tmp_path / "tokens.parquet"
+    duckdb.sql("SELECT 'amada' AS token, 'ana' AS lemma").write_parquet(str(tokens))
+
+    assert job.leak_check(bronze_file, [tokens], ANONYMIZE_DEFAULTS)[tokens] == set()
