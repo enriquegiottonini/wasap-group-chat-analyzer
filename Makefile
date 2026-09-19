@@ -1,6 +1,6 @@
 # `make help` lists every rule with its description ("## ..." at the end of the line).
 .DEFAULT_GOAL := help
-.PHONY: help requirements test lint format clean nb nbs ingest
+.PHONY: help requirements test lint format clean nb nbs ingest anonymize leak-check data
 
 NOTEBOOKS = notebooks/utils notebooks/01_eda_bronze notebooks/02_eda_silver
 
@@ -49,6 +49,14 @@ CHAT ?=
 ZIP ?=
 ON_EXISTS ?=
 export CHAT
+
+data: ingest anonymize ## Run the whole pipeline for CHAT: ingest → anonymize
+
+anonymize: ## Parse data/raw/<chat>/ into interim bronze.parquet (real names, local only) and messages_anon.parquet
+	uv run python -m wasap_group_analyzer.jobs.anonymize_job $(if $(CHAT),--chat "$(CHAT)")
+
+leak-check: ## Fail if a real name shows up in interim/processed data, notebooks or references (SHOW=1 lists them)
+	uv run python -m wasap_group_analyzer.jobs.leak_check_job $(if $(CHAT),--chat "$(CHAT)") $(if $(SHOW),--show)
 
 ingest: ## Copy a WhatsApp export to data/raw/<chat>/, unzip it and write FUENTE.txt (CHAT=, ZIP=, ON_EXISTS=)
 	uv run python -m wasap_group_analyzer.jobs.ingest_job $(if $(CHAT),--chat "$(CHAT)") \

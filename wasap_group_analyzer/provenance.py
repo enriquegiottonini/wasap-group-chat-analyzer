@@ -1,11 +1,21 @@
 from datetime import UTC, date, datetime
 import hashlib
 from pathlib import Path
+import re
 import textwrap
 
 from loguru import logger
 
 SOURCE_DESCRIPTION_FILENAME = "FUENTE.txt"
+
+
+def read_group_name(raw_dir: Path) -> str:
+    """Nombre del grupo según la primera línea de FUENTE.txt (la escribe el job de ingesta)."""
+    first_line = (raw_dir / SOURCE_DESCRIPTION_FILENAME).read_text(encoding="utf-8").split("\n")[0]
+    match = re.search(r'"(.+)"', first_line)
+    if not match:
+        raise ValueError(f"Group name not found in {raw_dir / SOURCE_DESCRIPTION_FILENAME}")
+    return match[1]
 
 
 def sha256(path: Path) -> str:

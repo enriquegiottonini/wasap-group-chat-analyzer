@@ -5,7 +5,6 @@ app = marimo.App(width="medium")
 
 with app.setup:
     from pathlib import Path
-    import re
 
     import duckdb
     import marimo as mo
@@ -16,6 +15,7 @@ with app.setup:
     from wasap_group_analyzer.anonymize import sender_id
     from wasap_group_analyzer.config import active_chat, load_params, load_salt
     from wasap_group_analyzer.constants import INTERIM_DIR, PROCESSED_DIR, RAW_DIR
+    from wasap_group_analyzer.provenance import read_group_name
 
     # Colores de las gráficas: una sola serie en azul; texto, ejes y rejilla recesivos.
     COLORS = {
@@ -91,20 +91,17 @@ def chat_dirs(chat: str | None = None) -> dict[str, Path]:
 @app.function
 def group_name(chat: str | None = None) -> str:
     """Nombre del grupo, de la primera línea de FUENTE.txt (lo escribe el job de ingesta)."""
-    first_line = (chat_dirs(chat)["raw"] / "FUENTE.txt").read_text(encoding="utf-8").split("\n")[0]
-    match = re.search(r'"(.+)"', first_line)
-    if not match:
-        raise ValueError(f"Group name not found in FUENTE.txt: {first_line!r}")
-    return match[1]
+    return read_group_name(chat_dirs(chat)["raw"])
 
 
 @app.function
-def connect(chat: str | None = None) -> duckdb.DuckDBPyConnection:
+def connect(chat: str | None = None, views: bool = True) -> duckdb.DuckDBPyConnection:
     """DuckDB en memoria para explorar un chat.
 
     - `anon(nombre)`: id anónimo del nombre (mismo hash con sal que el job de
       anonimización), para mostrar remitentes sin exponer nombres reales.
-    - Una vista por cada `.parquet` de `interim/` y `processed/`, con el nombre del archivo.
+    - Si `views`, una vista por cada `.parquet` de `interim/` y `processed/`, con el
+      nombre del archivo (`bronze`, `messages_anon`...).
 
     El texto crudo (`raw/`) no se carga aquí: leerlo y separarlo en registros es parte de
     lo que explica `01_eda_bronze`.
@@ -115,11 +112,14 @@ def connect(chat: str | None = None) -> duckdb.DuckDBPyConnection:
     salt = load_salt()
     con.create_function("anon", lambda name: sender_id(name, salt), ["VARCHAR"], "VARCHAR")
 
-    for layer in ("interim", "processed"):
-        for parquet in sorted(dirs[layer].glob("*.parquet")):
-            con.execute(
-                f'CREATE VIEW "{parquet.stem}" AS SELECT * FROM read_parquet(?)', [str(parquet)]
-            )
+    if views:
+        for layer in ("interim", "processed"):
+            for parquet in sorted(dirs[layer].glob("*.parquet")):
+                # Una vista no admite parámetros preparados: la ruta va en el SQL, escapada.
+                path = str(parquet).replace("'", "''")
+                con.execute(
+                    f"CREATE VIEW \"{parquet.stem}\" AS SELECT * FROM read_parquet('{path}')"
+                )
     return con
 
 

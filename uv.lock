@@ -1614,6 +1614,7 @@ name = "wasap-group-analyzer"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [
+    { name = "duckdb" },
     { name = "emoji" },
     { name = "es-core-news-sm" },
     { name = "loguru" },
@@ -1634,6 +1635,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "duckdb", specifier = ">=1.5" },
     { name = "emoji", specifier = ">=2.14" },
     { name = "es-core-news-sm", url = "https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.8.0/es_core_news_sm-3.8.0-py3-none-any.whl" },
     { name = "loguru" },

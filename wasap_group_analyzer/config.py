@@ -38,6 +38,14 @@ def active_chat(params: dict, chat: str | None = None) -> str:
     return validate_chat(chat)
 
 
+# Ajustes de la anonimización (sección `anonymize` de params.yml); ver anonymize.Masker.
+ANONYMIZE_DEFAULTS = {"min_length": 3, "keep_words": [], "allow_names": ["Meta AI"]}
+
+
+def anonymize_settings(params: dict) -> dict:
+    return {**ANONYMIZE_DEFAULTS, **(params.get("anonymize") or {})}
+
+
 def load_salt() -> bytes:
     """Sal secreta para los ids anonimizados, desde `ANON_SALT` en `.env`.
 

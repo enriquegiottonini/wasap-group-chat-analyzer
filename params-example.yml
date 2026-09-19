@@ -42,5 +42,14 @@ source:
     Datos privados de los participantes del grupo, usados solo con fines académicos. No se
     redistribuyen: data/ no se versiona en git y todo conjunto derivado se anonimiza.
 
+anonymize:
+  # Palabras que forman parte del nombre de algún contacto pero que en el chat son palabras
+  # comunes y no deben enmascararse (p. ej. la carrera o la universidad en "Ana LCC Unison").
+  keep_words: []
+  # Nombres que no son personas y se dejan tal cual (bots, cuentas públicas).
+  allow_names: ["Meta AI"]
+  # Largo mínimo de una palabra de nombre para enmascararla donde aparezca en el texto.
+  min_length: 3
+
 nlp:
   model: "es_core_news_sm"

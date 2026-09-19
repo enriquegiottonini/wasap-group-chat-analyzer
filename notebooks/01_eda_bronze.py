@@ -46,7 +46,9 @@ def _():
 def _():
     dirs = chat_dirs()
     group = group_name()
-    con = connect()
+    # Sin vistas de interim/: este notebook arma su propia tabla `bronze` a partir del
+    # texto crudo, y al final la compara con la que produce el job.
+    con = connect(views=False)
     # El grupo mismo aparece como remitente de algunos avisos; lo comparamos en SQL.
     con.execute("SET VARIABLE grupo = ?", [group])
     note(f"Chat activo: **{dirs['chat']}** (`data/raw/{dirs['chat']}/`)")
@@ -664,27 +666,80 @@ def _():
 
     ## 9. Qué conservamos y qué descartamos
 
-    Esta tabla es la especificación del job de anonimización (`make anonymize`), que
-    produce `data/interim/<chat>/messages_anon.parquet` con una fila por registro:
+    Esta tabla es la especificación del job de anonimización (`make anonymize`). El job
+    deja dos archivos en `data/interim/<chat>/`, con una fila por registro:
 
-    | Dato crudo | Decisión | Columna en interim |
+    - `bronze.parquet`: la tabla de este notebook (`record_no`, `timestamp`, `sender`,
+      `body`, `kind`) **con nombres reales y el texto sin tocar**, para análisis manual en
+      esta máquina. Como todo `data/`, nunca se sube a git.
+    - `messages_anon.parquet`: la versión anonimizada, entrada de silver:
+
+    | Dato crudo | Decisión | Columna en `messages_anon` |
     |---|---|---|
     | Orden del registro en el archivo | se conserva | `message_id` |
     | Fecha y hora (12 h, hora local) | se convierte a timestamp de 24 h, sin zona (hora local) | `timestamp` |
-    | Remitente | hash con sal (`anon`); el grupo como remitente se marca como aviso | `sender_id`, `is_group_notice` |
-    | Cuerpo de texto y pie de foto | se conserva con anonimización profunda (menciones, nombres, teléfonos y correos) | `body` |
-    | Marcador de adjunto (`sticker omitted`…) | se conserva: da el tipo de mensaje | en `body`, para clasificarlo en silver |
-    | Sufijo `<This message was edited>` | se conserva en `body`; en silver pasa a `is_edited` | en `body` |
-    | Encuestas `POLL:` | se conservan (pregunta y opciones son contenido) | `body` |
-    | Mensajes de una sola vista, eliminados, no disponibles, vacíos | se conserva el registro; el texto es fijo y en inglés | `body` |
-    | Avisos del sistema y del grupo | se conserva el registro, **se descarta el texto** (trae nombres) | `body` = tipo de aviso |
-    | Ubicaciones | se conserva el registro, **se descartan las coordenadas** | `body` = tipo de aviso |
-    | Marcas invisibles U+200E, U+2068/9, U+202F | se quitan o se normalizan; U+200D se conserva (emojis) | — |
-    | Nombre real de remitentes y mencionados | **nunca sale de raw** | — |
+    | Remitente | hash con sal (`anon`); vacío (`NULL`) en los avisos del grupo | `sender_id` |
+    | Tipo de registro | se conserva | `kind` |
+    | Texto, pie de foto y encuestas | se conservan con anonimización profunda | `body` |
+    | Marcador de adjunto (`sticker omitted`…) | se conserva: da el tipo de mensaje en silver | en `body` |
+    | Sufijo `<This message was edited>` | se conserva; en silver pasa a `is_edited` | en `body` |
+    | Una sola vista, eliminados, no disponibles, vacíos | se conserva el registro, sin cuerpo | `body` = `NULL` |
+    | Avisos del sistema y del grupo | se conserva el registro, **se descarta el texto** (trae nombres) | `body` = `NULL` |
+    | Ubicaciones | se conserva el registro, **se descartan las coordenadas** | `body` = `NULL` |
+    | Marcas invisibles U+200E, U+2068/9, U+202F | se conservan en interim; silver las limpia (U+200D se queda: es parte de los emojis) | en `body` |
+    | Nombres reales de remitentes y mencionados | solo en `raw/` y `bronze.parquet`, **nunca** en `messages_anon`, silver, notebooks ni git | — |
+
+    La anonimización profunda del texto reemplaza, en este orden:
+
+    | En el texto | Queda como |
+    |---|---|
+    | Mención `@Nombre` | `@[id]` (el id del mencionado; `@Meta AI` se deja porque es un bot) |
+    | URL | `[url:dominio]` (el resto puede traer usuarios o identificadores) |
+    | Correo | `[correo]` |
+    | Número de 8 dígitos o más: teléfono, cuenta, tarjeta, folio (no fechas ni rangos de años) | `[numero]` |
+    | Nombre o palabra de nombre de un miembro, sin importar mayúsculas, acentos ni letras decoradas | `[id]`, o `[nombre]` si la comparten varios miembros |
+
+    Queda un riesgo: apodos que no forman parte del nombre de contacto de nadie. La
+    verificación `make leak-check` busca todos los nombres reales en `messages_anon`,
+    silver, los notebooks exportados y las referencias, y falla si encuentra alguno.
 
     Lo que queda para el EDA silver (`02_eda_silver`): definir los tipos de mensaje, qué
     cuenta como palabra, emojis, stop words, adjetivos y los alias de presidentes.
+
+    ## 10. El job produce lo mismo que este notebook
+
+    El parseo del job (`wasap_group_analyzer/parsing.py`) es el SQL de este notebook.
+    Si ya se corrió `make anonymize`, comparamos las dos tablas fila por fila:
     """)
+    return
+
+
+@app.cell
+def _(dirs):
+    job_bronze = dirs["interim"] / "bronze.parquet"
+    mo.stop(
+        not job_bronze.exists(),
+        note("Todavía no existe `bronze.parquet`: corre `make anonymize` y vuelve a ejecutar."),
+    )
+    return (job_bronze,)
+
+
+@app.cell
+def _(bronze, con, job_bronze):
+    job_check = mo.sql(
+        f"""
+        WITH job AS (SELECT * FROM read_parquet('{job_bronze}'))
+        SELECT
+            (SELECT count(*) FROM bronze) AS registros_notebook,
+            (SELECT count(*) FROM job) AS registros_job,
+            (SELECT count(*) FROM (
+                SELECT record_no, ts, sender, body, kind FROM bronze
+                EXCEPT
+                SELECT record_no, timestamp, sender, body, kind FROM job
+            )) AS filas_distintas
+        """,
+        engine=con
+    )
     return
 
 

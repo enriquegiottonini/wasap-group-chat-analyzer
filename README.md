@@ -39,12 +39,30 @@ make ingest ZIP=~/Downloads/"WhatsApp Chat - Los Primos.zip"   # uno nuevo: slug
 ## Uso
 
 ```
+make data            # todo el pipeline del chat activo: ingest → anonymize
 make ingest          # copia el zip exportado a data/raw/, lo descomprime y escribe FUENTE.txt
+make anonymize       # parsea el chat y lo deja en data/interim/: bronze.parquet y messages_anon.parquet
+make leak-check      # falla si un nombre real aparece en interim, processed, notebooks o references
 make test            # corre la suite de pruebas
 make lint            # ruff check + format --check
 make format          # ruff check --fix + format
 make nbs             # exporta los notebooks de marimo a .ipynb con salidas
 ```
+
+`make anonymize` parsea `data/raw/<chat>/_chat.txt` (una fila por mensaje) y deja en
+`data/interim/<chat>/`:
+
+- `bronze.parquet`: los mensajes parseados **con nombres reales** y el texto sin tocar,
+  para análisis manual en esta máquina (p. ej. con `duckdb`). Nunca sale de `data/`.
+- `messages_anon.parquet`: la versión anonimizada, entrada del análisis. Los remitentes
+  son ids (hash con la sal de `.env`) y en el texto las menciones, nombres, URLs, correos
+  y números largos se sustituyen por marcas (`@[id]`, `[id]`, `[nombre]`, `[url:dominio]`,
+  `[correo]`, `[numero]`). Los avisos y las ubicaciones pierden el texto.
+
+La sección `anonymize` de `params.yml` ajusta el enmascarado: `keep_words` (palabras
+que forman parte de un nombre de contacto pero son comunes en el chat, p. ej. la
+carrera), `allow_names` (bots como Meta AI) y `min_length`. `make leak-check` busca
+cada nombre real en todo lo que se puede publicar; `SHOW=1` lista los que encuentre.
 
 ### Notebooks
 
@@ -72,7 +90,7 @@ params.yml                 <- configuración local (ignorado por git; ver params
 .env                       <- ANON_SALT, la sal secreta para anonimizar (ignorado por git)
 data/
 ├── raw/<chat>/            <- zip exportado, _chat.txt y FUENTE.txt (bronze)
-├── interim/<chat>/        <- mensajes parseados y anonimizados (transitorio)
+├── interim/<chat>/        <- bronze.parquet (con nombres, local) y messages_anon.parquet
 └── processed/<chat>/      <- conjuntos tidy (silver)
 references/                <- diccionarios de datos, uno por conjunto
 notebooks/                 <- marimo (.py) y su exportación a .ipynb para GitHub
@@ -80,11 +98,14 @@ wasap_group_analyzer/
 ├── config.py              <- carga params.yml y .env, configura el logging
 ├── constants.py           <- rutas del proyecto
 ├── logging.py             <- decorador @log_execution (inicio/fin/error + tiempo)
-├── anonymize.py           <- ids anónimos: blake2b con sal sobre el nombre normalizado
+├── parsing.py             <- _chat.txt -> una fila por mensaje (SQL de DuckDB, el mismo del EDA bronze)
+├── anonymize.py           <- ids anónimos (blake2b con sal) y enmascarado del texto
 ├── provenance.py          <- sha256 y FUENTE.txt: origen, fechas y descripción del chat exportado
 ├── policies/              <- FilePolicy: skip/overwrite/error ante archivos existentes
 └── jobs/
-    └── ingest_job.py      <- zip exportado -> data/raw/<chat>/ (zip, _chat.txt y FUENTE.txt)
+    ├── ingest_job.py      <- zip exportado -> data/raw/<chat>/ (zip, _chat.txt y FUENTE.txt)
+    ├── anonymize_job.py   <- raw -> data/interim/<chat>/ (bronze.parquet y messages_anon.parquet)
+    └── leak_check_job.py  <- busca nombres reales en lo que se puede publicar
 tests/                     <- pruebas con datos sintéticos (nunca mensajes reales)
 logs/                      <- logs de los jobs
 ```
