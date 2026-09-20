@@ -8,6 +8,7 @@ with app.setup:
 
     import duckdb
     import marimo as mo
+    from matplotlib.colors import LinearSegmentedColormap
     import matplotlib.pyplot as plt
     from matplotlib.ticker import StrMethodFormatter
     import polars as pl
@@ -71,7 +72,7 @@ def _():
     - `connect()`: DuckDB en memoria con la función `anon(nombre)` y una vista por cada
       `.parquet` del chat en `interim/` y `processed/`.
     - `note()`: markdown con números calculados, como HTML que GitHub sí muestra.
-    - `barh()` y `columns()`: gráficas de barras con el mismo estilo.
+    - `barh()`, `columns()` y `heatmap()`: gráficas con el mismo estilo.
     """)
     return
 
@@ -182,6 +183,31 @@ def columns(labels, values, title: str, ylabel: str = "", rotate: int = 0, ax=No
     ax.set_axisbelow(True)
     ax.set_title(title)
     ax.set_ylabel(ylabel)
+    plt.tight_layout()
+    return ax
+
+
+@app.function
+def heatmap(matrix, row_labels, col_labels, title: str, legend: str = "", ax=None):
+    """Mapa de calor de una sola tonalidad: claro es poco y oscuro es mucho.
+
+    Una escala secuencial (un solo tono, de claro a oscuro) es la que corresponde a una
+    magnitud; un arcoíris inventaría diferencias que no están en los datos.
+    """
+    scale = LinearSegmentedColormap.from_list(
+        "azules", ["#f4f8fd", "#9cc3ef", COLORS["series"], "#123f75"]
+    )
+    if ax is None:
+        _, ax = plt.subplots(figsize=(11, 0.42 * len(row_labels) + 1.8))
+    image = ax.imshow(matrix, aspect="auto", cmap=scale)
+    ax.set_xticks(range(len(col_labels)), col_labels, fontsize=8)
+    ax.set_yticks(range(len(row_labels)), row_labels)
+    ax.tick_params(length=0)
+    ax.grid(False)
+    ax.set_title(title)
+    bar = ax.figure.colorbar(image, ax=ax, shrink=0.9)
+    bar.outline.set_visible(False)
+    bar.set_label(legend, color=COLORS["muted"])
     plt.tight_layout()
     return ax
 

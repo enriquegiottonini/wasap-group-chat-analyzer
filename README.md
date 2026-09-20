@@ -88,10 +88,11 @@ nombres reales: los remitentes aparecen con un id anónimo (hash con la sal de `
   función `anon()`, tablas y gráficas), al estilo de los `AdventUtils` de Norvig.
 - `01_eda_bronze`: los datos crudos tal como los exporta WhatsApp, su estructura y
   rarezas, y la tabla de qué se conserva y qué se descarta.
-- `02_eda_silver`: con los mensajes anonimizados decide el diseño de los datos tidy
-  (tipos de mensaje, alias, qué es una palabra, emojis, risas, palabras vacías,
-  adjetivos) y, sobre los datos de silver, responde las preguntas del análisis
-  (pendiente).
+- `02_eda_silver`: en la parte 1, con los mensajes anonimizados, decide el diseño de los
+  datos tidy (tipos de mensaje, alias, qué es una palabra, emojis, risas, palabras
+  vacías, adjetivos); en la parte 2 responde, sobre los datos de silver, quién escribe
+  más, cuántas palabras por mensaje, quién manda más palabras, emojis y stickers, en qué
+  días y horas se escribe, y cuáles son las palabras y los adjetivos más usados.
 
 `make ingest` toma el zip del chat activo (o `ZIP=...`) y deja en `data/raw/<chat>/`
 una copia (`whatsapp_chat.zip`), su contenido (`_chat.txt`) y un `FUENTE.txt`
