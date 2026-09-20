@@ -1,59 +1,77 @@
 """Los diccionarios de datos tienen que describir las columnas que existen de verdad."""
 
-from pathlib import Path
-import re
+import json
 
 import duckdb
 import pytest
 
 from tests.chat_fixture import GROUP, write_chat
 from wasap_group_analyzer.config import ANONYMIZE_DEFAULTS
-from wasap_group_analyzer.jobs import anonymize_job, process_job
-
-REFERENCES = Path(__file__).parent.parent / "references"
-DICTIONARIES = {
-    "messages.parquet": "diccionario_messages.md",
-    "tokens.parquet": "diccionario_tokens.md",
-    "emojis.parquet": "diccionario_emojis.md",
-    "messages_anon.parquet": "diccionario_messages_anon.md",
-    "members.parquet": "diccionario_members.md",
-}
-
-
-def documented_columns(dictionary: Path) -> list[str]:
-    """Primera columna de la tabla que va debajo de "## Columnas"."""
-    section = dictionary.read_text(encoding="utf-8").split("## Columnas")[1].split("##")[0]
-    rows = re.findall(r"^\| *`([^`]+)` *\|", section, re.MULTILINE)
-    assert rows, f"{dictionary.name}: no documenta ninguna columna"
-    return rows
+from wasap_group_analyzer.jobs import anonymize_job, dictionary_job, process_job
 
 
 @pytest.fixture(scope="module")
-def datasets(tmp_path_factory):
+def processed(tmp_path_factory):
     tmp_path = tmp_path_factory.mktemp("pipeline")
     chat_file = write_chat(tmp_path / "raw")
     anonymize_job.anonymize(chat_file, GROUP, tmp_path / "interim", b"sal", ANONYMIZE_DEFAULTS)
     process_job.process(tmp_path / "interim", tmp_path / "processed", "es_core_news_sm")
+    return tmp_path / "processed"
+
+
+@pytest.fixture(scope="module")
+def dictionaries(processed, tmp_path_factory):
+    written = dictionary_job.build_dictionaries(processed, tmp_path_factory.mktemp("references"))
     return {
-        path.name: path
-        for layer in ("interim", "processed")
-        for path in (tmp_path / layer).glob("*.parquet")
+        path.stem.removeprefix("diccionario_"): json.loads(path.read_text("utf-8"))
+        for path in written
     }
 
 
-@pytest.mark.parametrize(("dataset", "dictionary"), DICTIONARIES.items())
-def test_dictionary_matches_the_dataset_columns(dataset, dictionary, datasets):
-    columns = [
-        row[0] for row in duckdb.sql(f"DESCRIBE SELECT * FROM '{datasets[dataset]}'").fetchall()
-    ]
+def test_every_column_is_documented_and_nothing_else(processed):
+    for dataset, descriptions in dictionary_job.DESCRIPTIONS.items():
+        columns = duckdb.sql(f"DESCRIBE SELECT * FROM '{processed / dataset}.parquet'").fetchall()
 
-    assert documented_columns(REFERENCES / dictionary) == columns
+        assert list(descriptions) == [row[0] for row in columns], dataset
+        assert all(description.strip() for description in descriptions.values()), dataset
 
 
-def test_every_dataset_has_a_dictionary_listed_in_the_index(datasets):
-    index = (REFERENCES / "README.md").read_text(encoding="utf-8")
+def test_one_json_per_dataset(dictionaries):
+    assert set(dictionaries) == set(dictionary_job.DESCRIPTIONS)
 
-    for dataset, dictionary in DICTIONARIES.items():
-        assert dataset in index, f"{dataset} no aparece en references/README.md"
-        assert dictionary in index, f"{dictionary} no aparece en references/README.md"
-    assert set(datasets) - {"bronze.parquet"} == set(DICTIONARIES)
+    for dataset, documented in dictionaries.items():
+        assert documented["dataset"] == dataset
+        assert documented["una_fila_es"] == dictionary_job.ROWS[dataset]
+        assert documented["archivo"].endswith(f"{dataset}.parquet")
+        assert documented["generado"]["comando"] == "make dictionary"
+
+
+def test_each_column_carries_its_profile_and_description(dictionaries):
+    for dataset, documented in dictionaries.items():
+        descriptions = dictionary_job.DESCRIPTIONS[dataset]
+
+        assert [column["nombre"] for column in documented["columnas"]] == list(descriptions)
+        for column in documented["columnas"]:
+            assert column["descripcion"] == descriptions[column["nombre"]]
+            assert column["tipo"] and column["nulos_pct"] >= 0 and column["distintos"] >= 0
+
+
+def test_text_columns_never_publish_their_range(dictionaries):
+    """El mínimo y el máximo de una columna de texto serían mensajes reales."""
+    for documented in dictionaries.values():
+        text_columns = [c for c in documented["columnas"] if c["tipo"] == "VARCHAR"]
+
+        assert all(column["rango"] is None for column in text_columns)
+        assert not text_columns or documented["nota"]
+    assert any(
+        column["rango"]
+        for documented in dictionaries.values()
+        for column in documented["columnas"]
+    )
+
+
+def test_build_dictionaries_fails_when_a_column_is_undocumented(processed, tmp_path, monkeypatch):
+    monkeypatch.setitem(dictionary_job.DESCRIPTIONS, "emojis", {"emoji": "solo una columna"})
+
+    with pytest.raises(ValueError, match="sin describir"):
+        dictionary_job.build_dictionaries(processed, tmp_path)

@@ -553,7 +553,9 @@ def _():
     ## 10. Especificación de silver
 
     El job de silver (`make process`) escribe tres conjuntos tidy en
-    `data/processed/<chat>/`, cada uno con su diccionario de datos en `references/`:
+    `data/processed/<chat>/`. Cada uno tiene su diccionario de datos en `references/`,
+    que genera `make dictionary` juntando las descripciones con el perfil que calcula
+    DuckDB (`SUMMARIZE`):
 
     **`messages.parquet`**: una fila por mensaje.
 

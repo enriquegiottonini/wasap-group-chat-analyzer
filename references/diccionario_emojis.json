@@ -1,0 +1,46 @@
+{
+  "dataset": "emojis",
+  "archivo": "data/processed/baketon_city/emojis.parquet",
+  "una_fila_es": "un emoji usado en un mensaje",
+  "filas": 10132,
+  "columnas": [
+    {
+      "nombre": "message_id",
+      "tipo": "BIGINT",
+      "nulos_pct": 0.0,
+      "distintos": 5664,
+      "rango": "126 – 258799",
+      "descripcion": "Mensaje en el que aparece el emoji; une con messages"
+    },
+    {
+      "nombre": "emoji_idx",
+      "tipo": "BIGINT",
+      "nulos_pct": 0.0,
+      "distintos": 68,
+      "rango": "0 – 67",
+      "descripcion": "Posición del emoji dentro del mensaje, desde 0"
+    },
+    {
+      "nombre": "emoji",
+      "tipo": "VARCHAR",
+      "nulos_pct": 0.0,
+      "distintos": 739,
+      "rango": null,
+      "descripcion": "El emoji completo; una secuencia con tono de piel o unida con ZWJ cuenta como uno solo"
+    },
+    {
+      "nombre": "emoji_name",
+      "tipo": "VARCHAR",
+      "nulos_pct": 0.0,
+      "distintos": 729,
+      "rango": null,
+      "descripcion": "Nombre del emoji en español"
+    }
+  ],
+  "generado": {
+    "fecha": "2026-09-20 01:22 UTC",
+    "comando": "make dictionary",
+    "perfil": "SUMMARIZE de DuckDB; los valores distintos son exactos"
+  },
+  "nota": "El rango de las columnas de texto no se publica: su mínimo y su máximo serían mensajes reales del chat."
+}

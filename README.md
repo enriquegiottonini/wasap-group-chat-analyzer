@@ -43,6 +43,7 @@ make data            # todo el pipeline del chat activo: ingest → anonymize
 make ingest          # copia el zip exportado a data/raw/, lo descomprime y escribe FUENTE.txt
 make anonymize       # parsea el chat y lo deja en data/interim/: bronze, messages_anon y members
 make process         # genera los conjuntos tidy en data/processed/: messages, tokens y emojis
+make dictionary      # regenera los diccionarios de datos de references/ a partir de esos conjuntos
 make leak-check      # falla si un nombre real aparece en interim, processed, notebooks o references
 make test            # corre la suite de pruebas
 make lint            # ruff check + format --check
@@ -68,8 +69,11 @@ make nbs             # exporta los notebooks de marimo a .ipynb con salidas
 `data/processed/<chat>/`, con spaCy (`es_core_news_sm`) para las palabras:
 `messages.parquet` (una fila por mensaje, con alias, tipo, texto y conteos),
 `tokens.parquet` (una fila por token, con lema, categoría gramatical y si es palabra,
-vacía o risa) y `emojis.parquet` (una fila por emoji). Cada uno tiene su diccionario de
-datos en [`references/`](references/README.md); las tres tablas se unen por `message_id`.
+vacía o risa) y `emojis.parquet` (una fila por emoji). Las tres se unen por `message_id`, y cada una tiene
+su diccionario de datos en [`references/`](references/README.md): un JSON que lista sus
+columnas con tipo, nulos, valores distintos, rango y descripción. El perfil lo
+calcula DuckDB (`SUMMARIZE`) y las descripciones viven en el job que los genera, que falla
+si una columna no está descrita.
 
 La sección `anonymize` de `params.yml` ajusta el enmascarado: `keep_words` (palabras
 que forman parte de un nombre de contacto pero son comunes en el chat, p. ej. la
@@ -110,7 +114,7 @@ data/
 ├── raw/<chat>/            <- zip exportado, _chat.txt y FUENTE.txt (bronze)
 ├── interim/<chat>/        <- bronze.parquet (con nombres, local), messages_anon.parquet y members.parquet
 └── processed/<chat>/      <- conjuntos tidy (silver): messages, tokens y emojis
-references/                <- diccionarios de datos, uno por conjunto (con índice en README.md)
+references/                <- un diccionario de datos (JSON generado) por conjunto tidy
 notebooks/                 <- marimo (.py) y su exportación a .ipynb para GitHub
 wasap_group_analyzer/
 ├── config.py              <- carga params.yml y .env, configura el logging
@@ -126,6 +130,7 @@ wasap_group_analyzer/
     ├── ingest_job.py      <- zip exportado -> data/raw/<chat>/ (zip, _chat.txt y FUENTE.txt)
     ├── anonymize_job.py   <- raw -> data/interim/<chat>/ (bronze, messages_anon y members)
     ├── process_job.py     <- interim -> data/processed/<chat>/ (messages, tokens y emojis)
+    ├── dictionary_job.py  <- describe las columnas de silver -> references/diccionario_<conjunto>.json
     └── leak_check_job.py  <- busca nombres reales en lo que se puede publicar
 tests/                     <- pruebas con datos sintéticos (nunca mensajes reales)
 logs/                      <- logs de los jobs

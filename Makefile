@@ -1,6 +1,6 @@
 # `make help` lists every rule with its description ("## ..." at the end of the line).
 .DEFAULT_GOAL := help
-.PHONY: help requirements test lint format clean nb nbs ingest anonymize process leak-check data
+.PHONY: help requirements test lint format clean nb nbs ingest anonymize process dictionary leak-check data
 
 NOTEBOOKS = notebooks/utils notebooks/01_eda_bronze notebooks/02_eda_silver
 
@@ -50,13 +50,16 @@ ZIP ?=
 ON_EXISTS ?=
 export CHAT
 
-data: ingest anonymize process ## Run the whole pipeline for CHAT: ingest → anonymize → process
+data: ingest anonymize process dictionary ## Run the whole pipeline for CHAT: ingest → anonymize → process → dictionary
 
 anonymize: ## Parse data/raw/<chat>/ into interim bronze.parquet (real names, local only) and messages_anon.parquet
 	uv run python -m wasap_group_analyzer.jobs.anonymize_job $(if $(CHAT),--chat "$(CHAT)")
 
 process: ## Build the tidy silver datasets in data/processed/<chat>/ (messages, tokens, emojis)
 	uv run python -m wasap_group_analyzer.jobs.process_job $(if $(CHAT),--chat "$(CHAT)")
+
+dictionary: ## Regenerate the data dictionaries in references/ from the silver datasets
+	uv run python -m wasap_group_analyzer.jobs.dictionary_job $(if $(CHAT),--chat "$(CHAT)")
 
 leak-check: ## Fail if a real name shows up in interim/processed data, notebooks or references (SHOW=1 lists them)
 	uv run python -m wasap_group_analyzer.jobs.leak_check_job $(if $(CHAT),--chat "$(CHAT)") $(if $(SHOW),--show)

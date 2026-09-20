@@ -1,0 +1,78 @@
+{
+  "dataset": "tokens",
+  "archivo": "data/processed/baketon_city/tokens.parquet",
+  "una_fila_es": "un token (palabra, número, signo o emoji) dentro de un mensaje",
+  "filas": 1190850,
+  "columnas": [
+    {
+      "nombre": "message_id",
+      "tipo": "BIGINT",
+      "nulos_pct": 0.0,
+      "distintos": 226776,
+      "rango": "1 – 259013",
+      "descripcion": "Mensaje al que pertenece el token; une con messages"
+    },
+    {
+      "nombre": "token_idx",
+      "tipo": "BIGINT",
+      "nulos_pct": 0.0,
+      "distintos": 11745,
+      "rango": "0 – 11744",
+      "descripcion": "Posición del token dentro del mensaje, desde 0"
+    },
+    {
+      "nombre": "token",
+      "tipo": "VARCHAR",
+      "nulos_pct": 0.0,
+      "distintos": 61240,
+      "rango": null,
+      "descripcion": "El token tal como se escribió, en minúsculas"
+    },
+    {
+      "nombre": "lemma",
+      "tipo": "VARCHAR",
+      "nulos_pct": 0.0,
+      "distintos": 55116,
+      "rango": null,
+      "descripcion": "Lema en minúsculas; en adjetivos las formas cortas se unifican con la larga (buen: bueno)"
+    },
+    {
+      "nombre": "pos",
+      "tipo": "VARCHAR",
+      "nulos_pct": 0.0,
+      "distintos": 17,
+      "rango": null,
+      "descripcion": "Categoría gramatical UPOS de spaCy (NOUN, VERB, ADJ...); el modelo se entrenó con noticias y se equivoca con la jerga del chat"
+    },
+    {
+      "nombre": "is_alpha",
+      "tipo": "BOOLEAN",
+      "nulos_pct": 0.0,
+      "distintos": 2,
+      "rango": "false – true",
+      "descripcion": "Si el token es una palabra: solo letras; números, signos y emojis son false"
+    },
+    {
+      "nombre": "is_stop",
+      "tipo": "BOOLEAN",
+      "nulos_pct": 0.0,
+      "distintos": 2,
+      "rango": "false – true",
+      "descripcion": "Palabra vacía: lista de spaCy, muletilla del chat, letra sola o risa; para contar adjetivos no conviene filtrar por aquí, porque spaCy considera vacíos a bueno, mejor o nuevo"
+    },
+    {
+      "nombre": "is_laugh",
+      "tipo": "BOOLEAN",
+      "nulos_pct": 0.0,
+      "distintos": 2,
+      "rango": "false – true",
+      "descripcion": "Si es una risa: jaja, jejeje, jsjsjs, xd, lol y variantes"
+    }
+  ],
+  "generado": {
+    "fecha": "2026-09-20 01:22 UTC",
+    "comando": "make dictionary",
+    "perfil": "SUMMARIZE de DuckDB; los valores distintos son exactos"
+  },
+  "nota": "El rango de las columnas de texto no se publica: su mínimo y su máximo serían mensajes reales del chat."
+}

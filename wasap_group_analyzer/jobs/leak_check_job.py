@@ -6,7 +6,7 @@ busca, como palabras completas y sin importar mayúsculas ni acentos, en:
 
 - data/interim/<chat>/messages_anon.parquet y members.parquet, y data/processed/<chat>/*.parquet
 - notebooks/*.py y notebooks/*.ipynb (código y salidas, sin las imágenes)
-- references/**/*.md y README.md
+- references/ (el diccionario de datos) y README.md
 
 Sale con código 1 si encuentra alguno. Por defecto solo reporta cuántos; con --show los
 lista (en la terminal, nunca en el log).
@@ -114,7 +114,8 @@ def default_targets(chat: str) -> list[Path]:
         *sorted((PROCESSED_DIR / chat).glob("*.parquet")),
     ]
     targets += sorted(NOTEBOOKS_DIR.glob("*.py")) + sorted(NOTEBOOKS_DIR.glob("*.ipynb"))
-    targets += sorted(REFERENCES_DIR.rglob("*.md")) + [PROJECT_ROOT / "README.md"]
+    targets += sorted(path for path in REFERENCES_DIR.rglob("*") if path.is_file())
+    targets += [PROJECT_ROOT / "README.md"]
     return [path for path in targets if path.exists()]
 
 

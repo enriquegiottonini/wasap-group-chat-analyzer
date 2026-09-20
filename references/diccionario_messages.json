@@ -1,0 +1,94 @@
+{
+  "dataset": "messages",
+  "archivo": "data/processed/baketon_city/messages.parquet",
+  "una_fila_es": "un mensaje del chat, incluidos adjuntos y avisos",
+  "filas": 259014,
+  "columnas": [
+    {
+      "nombre": "message_id",
+      "tipo": "BIGINT",
+      "nulos_pct": 0.0,
+      "distintos": 259014,
+      "rango": "1 – 259014",
+      "descripcion": "Orden del registro en la exportación, desde 1; llave primaria y unión con tokens y emojis"
+    },
+    {
+      "nombre": "timestamp",
+      "tipo": "TIMESTAMP",
+      "nulos_pct": 0.0,
+      "distintos": 251803,
+      "rango": "2024-09-28 14:31:21 – 2026-09-18 16:45:29",
+      "descripcion": "Fecha y hora local del celular que exportó, sin zona horaria"
+    },
+    {
+      "nombre": "sender",
+      "tipo": "VARCHAR",
+      "nulos_pct": 0.0,
+      "distintos": 42,
+      "rango": null,
+      "descripcion": "Alias del miembro (un animal); vacío en los avisos que firma el grupo"
+    },
+    {
+      "nombre": "message_type",
+      "tipo": "VARCHAR",
+      "nulos_pct": 0.0,
+      "distintos": 17,
+      "rango": null,
+      "descripcion": "text, sticker, image, audio, video, gif, video_note, document, contact, poll, location, view_once, deleted, unavailable, system_notice, group_notice o empty"
+    },
+    {
+      "nombre": "content",
+      "tipo": "VARCHAR",
+      "nulos_pct": 11.04,
+      "distintos": 186563,
+      "rango": null,
+      "descripcion": "Texto que escribió la persona, anonimizado: el mensaje, el pie de foto o la encuesta; vacío si el mensaje no trae texto"
+    },
+    {
+      "nombre": "is_edited",
+      "tipo": "BOOLEAN",
+      "nulos_pct": 0.0,
+      "distintos": 2,
+      "rango": "false – true",
+      "descripcion": "Si WhatsApp marcó el mensaje como editado"
+    },
+    {
+      "nombre": "n_words",
+      "tipo": "BIGINT",
+      "nulos_pct": 0.0,
+      "distintos": 209,
+      "rango": "0 – 10967",
+      "descripcion": "Palabras del contenido: tokens alfabéticos; 0 si no hay texto"
+    },
+    {
+      "nombre": "n_emojis",
+      "tipo": "BIGINT",
+      "nulos_pct": 0.0,
+      "distintos": 26,
+      "rango": "0 – 68",
+      "descripcion": "Emojis del contenido; es el número de filas de este mensaje en emojis"
+    },
+    {
+      "nombre": "n_mentions",
+      "tipo": "BIGINT",
+      "nulos_pct": 0.0,
+      "distintos": 10,
+      "rango": "0 – 12",
+      "descripcion": "Menciones a miembros (@[Alias]) en el contenido"
+    },
+    {
+      "nombre": "has_url",
+      "tipo": "BOOLEAN",
+      "nulos_pct": 0.0,
+      "distintos": 2,
+      "rango": "false – true",
+      "descripcion": "Si el contenido trae al menos un enlace ([url:dominio])"
+    }
+  ],
+  "generado": {
+    "fecha": "2026-09-20 01:22 UTC",
+    "comando": "make dictionary",
+    "perfil": "SUMMARIZE de DuckDB; los valores distintos son exactos"
+  },
+  "nota": "El rango de las columnas de texto no se publica: su mínimo y su máximo serían mensajes reales del chat."
+}
