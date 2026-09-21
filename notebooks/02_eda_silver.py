@@ -999,9 +999,6 @@ def _(top_content_words):
         + ". Son sobre todo groserías que en el habla del norte de México funcionan como "
         "muletilla, y palabras de quedar de verse (*casa*, *mañana*, *alguien*): el grupo "
         "se usa para organizar planes más que para conversar de un tema.\n\n"
-        "Por usuario, las listas se parecen entre sí en las primeras palabras y se "
-        "distinguen después: cada quien tiene sus propias muletillas, y ahí se nota quién "
-        "organiza planes, quién habla de futbol y quién de la escuela."
     )
     return
 
@@ -1039,14 +1036,7 @@ def _(con, tokens):
 def _(top_adjectives):
     note(
         f"El adjetivo más usado es **{top_adjectives['adjetivo'][0]}** "
-        f"({top_adjectives['veces'][0]:,} veces), seguido de {top_adjectives['adjetivo'][1]} y "
-        f"{top_adjectives['adjetivo'][2]}. Son adjetivos de valoración —bueno, mejor, nuevo— "
-        "más los que este grupo usa para calificarlo todo, incluidas varias groserías que "
-        "en el español de México funcionan como adjetivos.\n\n"
-        "Hay que leer la lista con reserva: `es_core_news_sm` se entrenó con noticias, y "
-        "en un chat sin puntuación confunde sustantivos y verbos con adjetivos (sección "
-        "7). Los primeros lugares son sólidos; hacia el final de la lista aparecen "
-        "palabras mal etiquetadas."
+        "Bueno viene del lema de spaCy, que incluye buenos dias, tardes, noches. Los demás vienen tambien de frases memeables como 'que duro', 'mejor nadota', 'solo reales'."
     )
     return
 
@@ -1099,20 +1089,21 @@ def _(con, messages):
 
 
 @app.cell
+def _():
+    return
+
+
+@app.cell
 def _(by_month):
     _full = by_month.filter(~by_month["incompleto"])
     _peak = _full.sort("mensajes", descending=True).row(0, named=True)
     _low = _full.sort("mensajes").row(0, named=True)
     _first, _last = _full.row(0, named=True), _full.row(-1, named=True)
     note(
-        f"Entre los {len(_full)} meses completos, el más activo es **{_peak['mes']}** "
+        f"La cantidad de mensajes se mantiene relativamente estable. Entre los {len(_full)} meses completos, el más activo es **{_peak['mes']}** "
         f"({_peak['mensajes']:,} mensajes) y el más callado **{_low['mes']}** "
         f"({_low['mensajes']:,}): {_peak['mensajes'] / _low['mensajes']:.1f} veces de "
-        f"diferencia. El grupo empezó en **{_first['mes']}** con {_first['mensajes']:,} "
-        f"mensajes, bajó y volvió a subir, y en el último mes completo ({_last['mes']}) "
-        f"llegó a {_last['mensajes']:,}. La cantidad de personas que escriben en un mes "
-        f"casi no cambia (entre {_full['personas'].min()} y {_full['personas'].max()}): "
-        "lo que sube y baja es cuánto habla el mismo grupo, no cuántos son."
+        f"diferencia."
     )
     return
 
