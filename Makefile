@@ -59,7 +59,7 @@ process: ## Build the tidy silver datasets in data/processed/<chat>/ (messages, 
 	uv run python -m wasap_group_analyzer.jobs.process_job $(if $(CHAT),--chat "$(CHAT)")
 
 dictionary: ## Regenerate the data dictionaries in references/ from the silver datasets
-	uv run python -m wasap_group_analyzer.jobs.dictionary_job $(if $(CHAT),--chat "$(CHAT)")
+	uv run python -m wasap_group_analyzer.metadata.dictionary $(if $(CHAT),--chat "$(CHAT)")
 
 leak-check: ## Fail if a real name shows up in interim/processed data, notebooks or references (SHOW=1 lists them)
 	uv run python -m wasap_group_analyzer.jobs.leak_check_job $(if $(CHAT),--chat "$(CHAT)") $(if $(SHOW),--show)

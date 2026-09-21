@@ -26,8 +26,8 @@ from wasap_group_analyzer.config import (
 )
 from wasap_group_analyzer.constants import INTERIM_DIR, RAW_DIR
 from wasap_group_analyzer.logging import log_execution
+from wasap_group_analyzer.metadata.source import read_group_name
 from wasap_group_analyzer.parsing import FSI, PDI, build_bronze
-from wasap_group_analyzer.provenance import read_group_name
 
 CHAT_FILENAME = "_chat.txt"
 BRONZE_FILENAME = "bronze.parquet"

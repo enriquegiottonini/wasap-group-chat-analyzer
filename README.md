@@ -124,13 +124,14 @@ wasap_group_analyzer/
 ├── anonymize.py           <- ids anónimos (blake2b con sal) y enmascarado del texto
 ├── aliases.py             <- alias de los miembros: animales de México
 ├── text.py                <- tipo de mensaje, contenido legible, emojis, palabras (spaCy) y stop words
-├── provenance.py          <- sha256 y FUENTE.txt: origen, fechas y descripción del chat exportado
+├── metadata/
+│   ├── source.py          <- FUENTE.txt: origen, fechas, sha256 y descripción del chat exportado
+│   └── dictionary.py      <- diccionario de las columnas de silver -> references/diccionario_<conjunto>.json
 ├── policies/              <- FilePolicy: skip/overwrite/error ante archivos existentes
 └── jobs/
     ├── ingest_job.py      <- zip exportado -> data/raw/<chat>/ (zip, _chat.txt y FUENTE.txt)
     ├── anonymize_job.py   <- raw -> data/interim/<chat>/ (bronze, messages_anon y members)
     ├── process_job.py     <- interim -> data/processed/<chat>/ (messages, tokens y emojis)
-    ├── dictionary_job.py  <- describe las columnas de silver -> references/diccionario_<conjunto>.json
     └── leak_check_job.py  <- busca nombres reales en lo que se puede publicar
 tests/                     <- pruebas con datos sintéticos (nunca mensajes reales)
 logs/                      <- logs de los jobs

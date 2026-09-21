@@ -7,7 +7,8 @@ import pytest
 
 from tests.chat_fixture import GROUP, write_chat
 from wasap_group_analyzer.config import ANONYMIZE_DEFAULTS
-from wasap_group_analyzer.jobs import anonymize_job, dictionary_job, process_job
+from wasap_group_analyzer.jobs import anonymize_job, process_job
+from wasap_group_analyzer.metadata import dictionary
 
 
 @pytest.fixture(scope="module")
@@ -21,7 +22,7 @@ def processed(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def dictionaries(processed, tmp_path_factory):
-    written = dictionary_job.build_dictionaries(processed, tmp_path_factory.mktemp("references"))
+    written = dictionary.build_dictionaries(processed, tmp_path_factory.mktemp("references"))
     return {
         path.stem.removeprefix("diccionario_"): json.loads(path.read_text("utf-8"))
         for path in written
@@ -29,7 +30,7 @@ def dictionaries(processed, tmp_path_factory):
 
 
 def test_every_column_is_documented_and_nothing_else(processed):
-    for dataset, descriptions in dictionary_job.DESCRIPTIONS.items():
+    for dataset, descriptions in dictionary.DESCRIPTIONS.items():
         columns = duckdb.sql(f"DESCRIBE SELECT * FROM '{processed / dataset}.parquet'").fetchall()
 
         assert list(descriptions) == [row[0] for row in columns], dataset
@@ -37,18 +38,18 @@ def test_every_column_is_documented_and_nothing_else(processed):
 
 
 def test_one_json_per_dataset(dictionaries):
-    assert set(dictionaries) == set(dictionary_job.DESCRIPTIONS)
+    assert set(dictionaries) == set(dictionary.DESCRIPTIONS)
 
     for dataset, documented in dictionaries.items():
         assert documented["dataset"] == dataset
-        assert documented["una_fila_es"] == dictionary_job.ROWS[dataset]
+        assert documented["una_fila_es"] == dictionary.ROWS[dataset]
         assert documented["archivo"].endswith(f"{dataset}.parquet")
         assert documented["generado"]["comando"] == "make dictionary"
 
 
 def test_each_column_carries_its_profile_and_description(dictionaries):
     for dataset, documented in dictionaries.items():
-        descriptions = dictionary_job.DESCRIPTIONS[dataset]
+        descriptions = dictionary.DESCRIPTIONS[dataset]
 
         assert [column["nombre"] for column in documented["columnas"]] == list(descriptions)
         for column in documented["columnas"]:
@@ -71,7 +72,7 @@ def test_text_columns_never_publish_their_range(dictionaries):
 
 
 def test_build_dictionaries_fails_when_a_column_is_undocumented(processed, tmp_path, monkeypatch):
-    monkeypatch.setitem(dictionary_job.DESCRIPTIONS, "emojis", {"emoji": "solo una columna"})
+    monkeypatch.setitem(dictionary.DESCRIPTIONS, "emojis", {"emoji": "solo una columna"})
 
     with pytest.raises(ValueError, match="sin describir"):
-        dictionary_job.build_dictionaries(processed, tmp_path)
+        dictionary.build_dictionaries(processed, tmp_path)

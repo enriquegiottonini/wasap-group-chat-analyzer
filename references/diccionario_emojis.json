@@ -38,9 +38,9 @@
     }
   ],
   "generado": {
-    "fecha": "2026-09-20 01:22 UTC",
+    "fecha": "2026-09-21 15:09 UTC",
     "comando": "make dictionary",
-    "perfil": "SUMMARIZE de DuckDB; los valores distintos son exactos"
+    "perfil": "SUMMARIZE de DuckDB;"
   },
   "nota": "El rango de las columnas de texto no se publica: su mínimo y su máximo serían mensajes reales del chat."
 }

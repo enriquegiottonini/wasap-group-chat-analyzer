@@ -3,7 +3,7 @@
 Lo único escrito a mano son las descripciones de abajo; el tipo, los nulos, los valores
 distintos y el rango los calcula DuckDB con SUMMARIZE al generar los archivos.
 
-    uv run python -m wasap_group_analyzer.jobs.dictionary_job [--chat SLUG]
+    uv run python -m wasap_group_analyzer.metadata.dictionary [--chat SLUG]
 """
 
 import argparse
@@ -120,7 +120,7 @@ def document(dataset: str, parquet: Path, n_rows: int, columns: list[dict]) -> d
         "generado": {
             "fecha": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
             "comando": "make dictionary",
-            "perfil": "SUMMARIZE de DuckDB; los valores distintos son exactos",
+            "perfil": "SUMMARIZE de DuckDB;",
         },
     }
     if any(column["type"] == TEXT_TYPE for column in columns):

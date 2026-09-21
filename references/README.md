@@ -10,7 +10,7 @@ Cada uno dice qué representa una fila del conjunto, cuántas filas tiene y, por
 su tipo, porcentaje de nulos, valores distintos, rango y una descripción.
 
 Los genera `make dictionary`: el perfil lo calcula DuckDB (`SUMMARIZE`) y las
-descripciones viven en `wasap_group_analyzer/jobs/dictionary_job.py`, que falla si una
+descripciones viven en `wasap_group_analyzer/metadata/dictionary.py`, que falla si una
 columna no está descrita. En las columnas de texto el rango es `null` a propósito: su
 mínimo y su máximo serían mensajes reales.
 

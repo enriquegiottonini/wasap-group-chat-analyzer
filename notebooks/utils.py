@@ -16,7 +16,7 @@ with app.setup:
     from wasap_group_analyzer.anonymize import sender_id
     from wasap_group_analyzer.config import active_chat, load_params, load_salt
     from wasap_group_analyzer.constants import INTERIM_DIR, PROCESSED_DIR, RAW_DIR
-    from wasap_group_analyzer.provenance import read_group_name
+    from wasap_group_analyzer.metadata.source import read_group_name
 
     # Colores de las gráficas: una sola serie en azul; texto, ejes y rejilla recesivos.
     COLORS = {

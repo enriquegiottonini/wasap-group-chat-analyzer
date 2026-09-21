@@ -5,8 +5,8 @@ import zipfile
 import pytest
 
 from wasap_group_analyzer.jobs import ingest_job as job
+from wasap_group_analyzer.metadata.source import SOURCE_DESCRIPTION_FILENAME
 from wasap_group_analyzer.policies.file import OnExists
-from wasap_group_analyzer.provenance import SOURCE_DESCRIPTION_FILENAME
 
 # Chat sintético con las rarezas del formato de iOS: CRLF, U+200E, U+202F y una
 # línea de continuación. Nunca usar mensajes reales en las pruebas.

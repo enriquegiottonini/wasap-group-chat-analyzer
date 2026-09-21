@@ -22,8 +22,8 @@ from loguru import logger
 from wasap_group_analyzer.config import active_chat, load_logging, load_params, validate_chat
 from wasap_group_analyzer.constants import RAW_DIR
 from wasap_group_analyzer.logging import log_execution
+from wasap_group_analyzer.metadata.source import sha256, write_source_description
 from wasap_group_analyzer.policies.file import FilePolicy, OnExists
-from wasap_group_analyzer.provenance import sha256, write_source_description
 
 RAW_ZIP_FILENAME = "whatsapp_chat.zip"
 
