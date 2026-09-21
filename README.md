@@ -96,7 +96,10 @@ nombres reales: los remitentes aparecen con un id anónimo (hash con la sal de `
   datos tidy (tipos de mensaje, alias, qué es una palabra, emojis, risas, palabras
   vacías, adjetivos); en la parte 2 responde, sobre los datos de silver, quién escribe
   más, cuántas palabras por mensaje, quién manda más palabras, emojis y stickers, en qué
-  días y horas se escribe, y cuáles son las palabras y los adjetivos más usados.
+  días y horas se escribe, y cuáles son las palabras y los adjetivos más usados (con nube
+  de palabras); en la parte 3, cómo evoluciona el grupo mes a mes, quién inicia y quién
+  cierra las conversaciones, qué palabras distinguen a cada persona (TF-IDF) y cómo
+  cambian las palabras con el tiempo.
 
 `make ingest` toma el zip del chat activo (o `ZIP=...`) y deja en `data/raw/<chat>/`
 una copia (`whatsapp_chat.zip`), su contenido (`_chat.txt`) y un `FUENTE.txt`

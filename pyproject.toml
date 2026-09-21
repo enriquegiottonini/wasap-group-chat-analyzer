@@ -29,6 +29,7 @@ dependencies = [
     "python-dotenv",
     "pyyaml>=6.0.2",
     "spacy>=3.8.16",
+    "wordcloud>=1.9.6",
 ]
 requires-python = "~=3.14.0"
 

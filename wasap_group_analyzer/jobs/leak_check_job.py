@@ -63,7 +63,9 @@ def real_name_forms(bronze_file: Path, settings: dict) -> dict[str, set[str]]:
 # El lema lo inventa el lematizador de spaCy, no lo escribió nadie: una palabra común
 # puede tener como lema un nombre ("amada" -> "amado"). Un nombre que sobreviviera al
 # enmascarado aparecería igual en la columna `token`, así que no se pierde detección.
-GENERATED_COLUMNS = frozenset({"lemma"})
+# El nombre de un emoji sale del emoji, no del chat: 👲 es "persona con gorro chino" aunque
+# "chino" sea un apodo en `extra_names`. Un nombre en el texto aparecería en `content`.
+GENERATED_COLUMNS = frozenset({"lemma", "emoji_name"})
 
 
 def texts(path: Path) -> Iterator[str]:

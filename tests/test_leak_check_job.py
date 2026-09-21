@@ -74,3 +74,13 @@ def test_lemmas_are_not_scanned(interim, tmp_path):
     duckdb.sql("SELECT 'amada' AS token, 'ana' AS lemma").write_parquet(str(tokens))
 
     assert job.leak_check(bronze_file, [tokens], ANONYMIZE_DEFAULTS)[tokens] == set()
+
+
+def test_emoji_names_are_not_scanned(interim, tmp_path):
+    bronze_file, _, _ = interim
+    emojis = tmp_path / "emojis.parquet"
+    duckdb.sql("SELECT '👲' AS emoji, 'persona con gorro ana' AS emoji_name").write_parquet(
+        str(emojis)
+    )
+
+    assert job.leak_check(bronze_file, [emojis], ANONYMIZE_DEFAULTS)[emojis] == set()

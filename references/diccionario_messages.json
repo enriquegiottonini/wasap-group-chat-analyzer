@@ -40,7 +40,7 @@
       "nombre": "content",
       "tipo": "VARCHAR",
       "nulos_pct": 11.04,
-      "distintos": 186563,
+      "distintos": 186328,
       "rango": null,
       "descripcion": "Texto que escribió la persona, anonimizado: el mensaje, el pie de foto o la encuesta; vacío si el mensaje no trae texto"
     },
@@ -86,7 +86,7 @@
     }
   ],
   "generado": {
-    "fecha": "2026-09-21 15:09 UTC",
+    "fecha": "2026-09-21 16:42 UTC",
     "comando": "make dictionary",
     "perfil": "SUMMARIZE de DuckDB;"
   },

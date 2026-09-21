@@ -8,10 +8,13 @@ with app.setup:
 
     import duckdb
     import marimo as mo
-    from matplotlib.colors import LinearSegmentedColormap
+    from matplotlib.colors import LinearSegmentedColormap, to_hex
+    from matplotlib.font_manager import FontProperties, findfont
+    from matplotlib.lines import Line2D
     import matplotlib.pyplot as plt
-    from matplotlib.ticker import StrMethodFormatter
+    from matplotlib.ticker import MaxNLocator, StrMethodFormatter
     import polars as pl
+    from wordcloud import WordCloud
 
     from wasap_group_analyzer.anonymize import sender_id
     from wasap_group_analyzer.config import active_chat, load_params, load_salt
@@ -25,6 +28,7 @@ with app.setup:
         "muted": "#52514e",
         "grid": "#e4e3df",
         "surface": "#fcfcfb",
+        "series_light": "#9cc3ef",
     }
 
     # Las tablas (resultados de mo.sql, en polars) se exportan como HTML estático: se muestran
@@ -72,7 +76,7 @@ def _():
     - `connect()`: DuckDB en memoria con la función `anon(nombre)` y una vista por cada
       `.parquet` del chat en `interim/` y `processed/`.
     - `note()`: markdown con números calculados, como HTML que GitHub sí muestra.
-    - `barh()`, `columns()` y `heatmap()`: gráficas con el mismo estilo.
+    - `barh()`, `boxplot()`, `columns()`, `line()`, `heatmap()` y `wordcloud()`: gráficas con el mismo estilo.
     """)
     return
 
@@ -150,6 +154,7 @@ def barh(labels, values, title: str, xlabel: str = "", fmt: str = "{:,.0f}", ax=
     ax.set_yticks(list(positions), labels)
     ax.tick_params(axis="y", length=0)
     ax.xaxis.grid(True)
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=5, integer=True))
     ax.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
     ax.set_axisbelow(True)
     ax.set_title(title)
@@ -170,6 +175,59 @@ def barh(labels, values, title: str, xlabel: str = "", fmt: str = "{:,.0f}", ax=
 
 
 @app.function
+def boxplot(groups: dict, title: str, xlabel: str = "", ax=None):
+    """Una caja por grupo, en el orden dado (la primera arriba): mediana, cuartiles y promedio.
+
+    La caja cubre la mitad central de los valores, la línea es la mediana y el rombo el
+    promedio; los bigotes llegan hasta 1.5 veces el rango de la caja y los valores más
+    lejanos no se dibujan, para que unos pocos casos extremos no aplasten al resto.
+    """
+    labels = list(groups)
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7, 0.6 * len(labels) + 1.4))
+    line_style = {"color": COLORS["muted"], "linewidth": 1.2}
+    ax.boxplot(
+        [groups[label] for label in labels],
+        orientation="horizontal",
+        tick_labels=labels,
+        widths=0.5,
+        showfliers=False,
+        showmeans=True,
+        patch_artist=True,
+        boxprops={"facecolor": COLORS["series_light"], "edgecolor": COLORS["muted"]},
+        medianprops={"color": COLORS["text"], "linewidth": 2},
+        whiskerprops=line_style,
+        capprops=line_style,
+        meanprops={
+            "marker": "D",
+            "markerfacecolor": COLORS["series"],
+            "markeredgecolor": COLORS["surface"],
+            "markersize": 7,
+        },
+    )
+    ax.invert_yaxis()
+    ax.set_xlim(right=ax.get_xlim()[1] * 1.25)  # espacio a la derecha para la leyenda
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=8, integer=True))
+    ax.tick_params(axis="y", length=0)
+    ax.xaxis.grid(True)
+    ax.set_axisbelow(True)
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.legend(
+        [
+            Line2D([], [], color=COLORS["text"], linewidth=2),
+            Line2D([], [], marker="D", color=COLORS["series"], linestyle="", markersize=7),
+        ],
+        ["mediana", "promedio"],
+        frameon=False,
+        loc="lower right",
+        labelcolor=COLORS["muted"],
+    )
+    plt.tight_layout()
+    return ax
+
+
+@app.function
 def columns(labels, values, title: str, ylabel: str = "", rotate: int = 0, ax=None):
     """Columnas verticales en el orden dado (p. ej. meses, días u horas)."""
     labels, values = list(labels), list(values)
@@ -180,6 +238,59 @@ def columns(labels, values, title: str, ylabel: str = "", rotate: int = 0, ax=No
     ax.tick_params(axis="x", length=0)
     ax.yaxis.grid(True)
     ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+    ax.set_axisbelow(True)
+    ax.set_title(title)
+    ax.set_ylabel(ylabel)
+    plt.tight_layout()
+    return ax
+
+
+@app.function
+def line(
+    labels,
+    values,
+    title: str,
+    ylabel: str = "",
+    every: int = 1,
+    hollow=(),
+    markers: bool = True,
+    label_peak: bool = False,
+    ax=None,
+):
+    """Línea de una serie en el orden dado (p. ej. meses), con el eje y desde cero.
+
+    - `every`: cada cuántas etiquetas se escribe una en el eje x.
+    - `hollow`: posiciones de puntos incompletos (p. ej. un mes a medias), sin relleno.
+    - `label_peak`: escribe el valor del punto más alto; es la única etiqueta directa.
+    """
+    labels, values = list(labels), list(values)
+    if ax is None:
+        _, ax = plt.subplots(figsize=(max(6, 0.3 * len(labels) + 2), 3.4))
+    positions = list(range(len(labels)))
+    ax.plot(positions, values, color=COLORS["series"], linewidth=2, zorder=2)
+    if markers:
+        marker = {"s": 30, "edgecolor": COLORS["series"], "linewidth": 1.5, "zorder": 3}
+        solid = [i for i in positions if i not in hollow]
+        ax.scatter(solid, [values[i] for i in solid], color=COLORS["series"], **marker)
+        if hollow:
+            ax.scatter(list(hollow), [values[i] for i in hollow], color=COLORS["surface"], **marker)
+    if label_peak:
+        peak = max(positions, key=values.__getitem__)
+        ax.annotate(
+            f"{labels[peak]}: {values[peak]:,.0f}",
+            (peak, values[peak]),
+            xytext=(0, 8),
+            textcoords="offset points",
+            ha="center",
+            fontsize=8,
+            color=COLORS["muted"],
+        )
+    ax.set_xticks(positions[::every], labels[::every])
+    ax.tick_params(axis="x", length=0)
+    ax.set_ylim(bottom=0, top=max(values) * 1.15)
+    ax.yaxis.grid(True)
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=4))
+    ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,g}"))
     ax.set_axisbelow(True)
     ax.set_title(title)
     ax.set_ylabel(ylabel)
@@ -208,6 +319,43 @@ def heatmap(matrix, row_labels, col_labels, title: str, legend: str = "", ax=Non
     bar = ax.figure.colorbar(image, ax=ax, shrink=0.9)
     bar.outline.set_visible(False)
     bar.set_label(legend, color=COLORS["muted"])
+    plt.tight_layout()
+    return ax
+
+
+@app.function
+def wordcloud(words, counts, title: str, ax=None):
+    """Nube de palabras: el tamaño de cada palabra es proporcional a su frecuencia.
+
+    Un solo tono, de claro (poco) a oscuro (mucho), en la misma tipografía que las gráficas;
+    la posición es aleatoria pero fija (misma semilla, misma nube). Sirve para ver el
+    conjunto y las diferencias grandes; para leer cifras exactas, la tabla.
+    """
+    frequencies = dict(zip(words, counts))
+    low, high = min(frequencies.values()), max(frequencies.values())
+    scale = LinearSegmentedColormap.from_list(
+        "azules_texto", ["#6fa8e6", COLORS["series"], "#123f75"]
+    )
+
+    def color(word, **_):
+        return to_hex(scale(((frequencies[word] - low) / max(high - low, 1)) ** 0.5))
+
+    cloud = WordCloud(
+        width=1100,
+        height=520,
+        background_color=COLORS["surface"],
+        color_func=color,
+        font_path=findfont(FontProperties(family="DejaVu Sans", weight="bold")),
+        prefer_horizontal=1.0,
+        relative_scaling=1,
+        margin=6,
+        random_state=42,
+    ).generate_from_frequencies(frequencies)
+    if ax is None:
+        _, ax = plt.subplots(figsize=(11, 5.2))
+    ax.imshow(cloud.to_array(), interpolation="bilinear")
+    ax.axis("off")
+    ax.set_title(title)
     plt.tight_layout()
     return ax
 

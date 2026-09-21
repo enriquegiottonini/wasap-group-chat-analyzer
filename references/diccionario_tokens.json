@@ -2,13 +2,13 @@
   "dataset": "tokens",
   "archivo": "data/processed/baketon_city/tokens.parquet",
   "una_fila_es": "un token (palabra, número, signo o emoji) dentro de un mensaje",
-  "filas": 1190850,
+  "filas": 1187442,
   "columnas": [
     {
       "nombre": "message_id",
       "tipo": "BIGINT",
       "nulos_pct": 0.0,
-      "distintos": 226776,
+      "distintos": 226601,
       "rango": "1 – 259013",
       "descripcion": "Mensaje al que pertenece el token; une con messages"
     },
@@ -24,7 +24,7 @@
       "nombre": "token",
       "tipo": "VARCHAR",
       "nulos_pct": 0.0,
-      "distintos": 61240,
+      "distintos": 61222,
       "rango": null,
       "descripcion": "El token tal como se escribió, en minúsculas"
     },
@@ -32,7 +32,7 @@
       "nombre": "lemma",
       "tipo": "VARCHAR",
       "nulos_pct": 0.0,
-      "distintos": 55116,
+      "distintos": 55103,
       "rango": null,
       "descripcion": "Lema en minúsculas; en adjetivos las formas cortas se unifican con la larga (buen: bueno)"
     },
@@ -70,7 +70,7 @@
     }
   ],
   "generado": {
-    "fecha": "2026-09-21 15:09 UTC",
+    "fecha": "2026-09-21 16:42 UTC",
     "comando": "make dictionary",
     "perfil": "SUMMARIZE de DuckDB;"
   },
