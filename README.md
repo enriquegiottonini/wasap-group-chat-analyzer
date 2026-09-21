@@ -12,6 +12,9 @@ cuándo, con qué palabras, emojis y stickers.
 Los datos del chat son privados: `data/` nunca se sube a git (solo su estructura de
 carpetas) y los notebooks publicados solo muestran nombres anonimizados.
 
+
+[***Libreta con Resultados***](https://github.com/enriquegiottonini/wasap-group-chat-analyzer/blob/main/notebooks/02_eda_silver.ipynb)
+
 ## Instalación
 
 ```
