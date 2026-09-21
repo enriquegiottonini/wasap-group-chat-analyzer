@@ -38,7 +38,7 @@
     }
   ],
   "generado": {
-    "fecha": "2026-09-21 16:42 UTC",
+    "fecha": "2026-09-21 17:21 UTC",
     "comando": "make dictionary",
     "perfil": "SUMMARIZE de DuckDB;"
   },
