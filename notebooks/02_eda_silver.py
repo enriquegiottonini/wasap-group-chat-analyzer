@@ -4,6 +4,7 @@ __generated_with = "0.24.2"
 app = marimo.App(width="medium")
 
 with app.setup:
+    import re
     import marimo as mo
     import matplotlib.pyplot as plt
     import polars as pl
@@ -36,6 +37,19 @@ with app.setup:
     # Tamaño de la muestra de mensajes de texto para explorar con spaCy (la muestra es
     # reproducible: misma semilla, mismos mensajes).
     SAMPLE_SIZE = 20_000
+
+    # Groserías: palabras que se reemplazan en gráficas y tablas por [grosería-N].
+    # Se configuran en params.yml bajo `eda.bad_words`; cambiarlas no requiere re-pipeline.
+    _bad = sorted((load_params().get("eda") or {}).get("bad_words") or [])
+    GROSERÍA = {w: f"grosería-{i + 1}" for i, w in enumerate(_bad)}
+
+    def censor(word: str) -> str:
+        return f"[{GROSERÍA[word]}]" if word in GROSERÍA else word
+
+    def censor_text(text: str) -> str:
+        for word, label in GROSERÍA.items():
+            text = re.sub(rf"\b{re.escape(word)}\b", f"[{label}]", text)
+        return text
 
 
 @app.cell(hide_code=True)
@@ -861,7 +875,7 @@ def _(con, tokens):
 
 @app.cell
 def _(all_words):
-    barh(all_words["palabra"], all_words["veces"], "Palabras más usadas, con las vacías", "veces")
+    barh([censor(w) for w in all_words["palabra"]], all_words["veces"], "Palabras más usadas, con las vacías", "veces")
     return
 
 
@@ -880,7 +894,7 @@ def _(con, tokens):
         output=False,
     )
     barh(
-        top_content_words["palabra"],
+        [censor(w) for w in top_content_words["palabra"]],
         top_content_words["veces"],
         "Palabras más usadas en el grupo (sin palabras vacías)",
         "veces",
@@ -903,7 +917,7 @@ def _(con, tokens):
         output=False,
     )
     wordcloud(
-        cloud_words["palabra"], cloud_words["veces"], "Las 80 palabras con contenido más usadas"
+        [censor(w) for w in cloud_words["palabra"]], cloud_words["veces"], "Las 80 palabras con contenido más usadas"
     )
     return
 
@@ -931,7 +945,11 @@ def _(con, messages, tokens):
         GROUP BY sender
         ORDER BY usuario
         """,
-        engine=con
+        engine=con,
+        output=False,
+    )
+    words_by_sender.with_columns(
+        pl.col("palabras_mas_usadas").map_elements(censor_text, return_dtype=pl.String)
     )
     return
 
@@ -978,7 +996,7 @@ def _(con, messages, tokens):
     heatmap(
         [[_rates.get((user, word), 0) for word in _words] for user in _users],
         _users,
-        _words,
+        [censor(w) for w in _words],
         "Cada palabra en el habla de cada usuario (15 con más palabras)",
         "veces por cada 1,000 palabras con contenido",
     )
@@ -993,7 +1011,7 @@ def _(top_content_words):
         "grupo. Filtrando las vacías (las de spaCy más las muletillas del chat, sección 6) "
         "aparece de qué se habla: las cinco primeras son "
         + ", ".join(
-            f"**{row['palabra']}** ({row['veces']:,})"
+            f"**{censor(row['palabra'])}** ({row['veces']:,})"
             for row in top_content_words.head(5).iter_rows(named=True)
         )
         + ". Son sobre todo groserías que en el habla del norte de México funcionan como "
@@ -1387,6 +1405,9 @@ def _(con, messages, tokens):
             .str.join(", ")
             .alias("palabras_distintivas")
         )
+        .with_columns(
+            pl.col("palabras_distintivas").map_elements(censor_text, return_dtype=pl.String)
+        )
     )
     return (distinctive,)
 
@@ -1397,7 +1418,7 @@ def _(distinctive):
     _fig, _axes = plt.subplots(3, 3, figsize=(11, 8))
     for _ax, _user in zip(_axes.flat, _users):
         _words = distinctive.filter(pl.col("usuario") == _user).head(6)
-        barh(_words["palabra"], _words["veces"], _user, ax=_ax)
+        barh([censor(w) for w in _words["palabra"]], _words["veces"], _user, ax=_ax)
     _fig
     return
 
@@ -1471,7 +1492,7 @@ def _(con, messages, tokens):
         line(
             [month[2:] for month in _months],
             [_rate.get(month, 0) for month in _months],
-            _word,
+            censor(_word),
             every=6,
             markers=False,
             ax=_ax,
@@ -1528,7 +1549,7 @@ def _(word_shift):
     )
     _fig, _axes = plt.subplots(1, 2, figsize=(11, 4.2))
     barh(
-        _rising["palabra"],
+        [censor(w) for w in _rising["palabra"]],
         _rising["veces_mas_usada"],
         "Suben",
         "veces más frecuente que el año anterior",
@@ -1536,7 +1557,7 @@ def _(word_shift):
         ax=_axes[0],
     )
     barh(
-        _falling["palabra"],
+        [censor(w) for w in _falling["palabra"]],
         _falling["veces_menos"],
         "Bajan",
         "veces menos frecuente que el año anterior",
@@ -1555,7 +1576,7 @@ def _(word_shift):
         "los últimos 12 meses contra los 12 anteriores, entre palabras usadas al menos 20 "
         "veces en cada periodo. Palabras **casi nuevas** (100 veces o más en el último año "
         "y a lo sumo 2 antes): "
-        + (", ".join(f"*{word}*" for word in _new["palabra"]) or "ninguna")
+        + (", ".join(f"*{censor(word)}*" for word in _new["palabra"]) or "ninguna")
         + "."
     )
     return
